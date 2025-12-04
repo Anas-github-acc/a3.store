@@ -1,0 +1,10 @@
+[project]
+name = "a3-redis"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.123.5",
+    "grpcio-tools>=1.76.0",
+    "requests>=2.32.5",
+    "uvicorn>=0.38.0",
+]
