@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kv
+  namespace: kv
+spec:
+  serviceName: kv-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kv-node
+  template:
+    metadata:
+      labels:
+        app: kv-node
+    spec:
+      containers:
+        - name: kv-node
+          # image: ${KV_IMAGE:-dist-kv:latest}
+          image: ${KV_NODE_IMAGE}
+          ports:
+            - containerPort: 50051
+              name: grpc
+            - containerPort: 8001
+              name: gossip
+          
+          env:
+            - name: GRPC_PORT
+              value: "50051"
+
+            - name: GOSSIP_PORT
+              value: "8001"
+
+            - name: NODE_NUM
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: DATA_DIR
+              value: "/app/data"
+
+            - name: OWN_ADDR
+              value: "$(NODE_ID).kv-headless.kv.svc.cluster.local:50051"
+            
+            # gRPC peers (all nodes)
+            - name: PEERS
+              value: >
+                kv-0.kv-headless.kv.svc.cluster.local:50051,
+                kv-1.kv-headless.kv.svc.cluster.local:50051,
+                kv-2.kv-headless.kv.svc.cluster.local:50051
+
+            # Gossip peers
+            - name: GOSSIP_PEERS
+              value: >
+                kv-0.kv-headless.kv.svc.cluster.local:8001,
+                kv-1.kv-headless.kv.svc.cluster.local:8001,
+                kv-2.kv-headless.kv.svc.cluster.local:8001
+            
+            - name: REPLICATION_FACTOR
+              value: "2"
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,11 @@
+controller:
+  service:
+    enabled: true
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+    type: LoadBalancer
+    externalTrafficPolicy: Local # Preserve client source IP
+    nodePorts:
+      http: 30080
+      https: 30443

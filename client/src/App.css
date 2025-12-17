@@ -1,0 +1,49 @@
+/* App-specific styles - most styling is handled by Tailwind and shadcn */
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(0.16 0 0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.30 0 0);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.40 0 0);
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid oklch(0.75 0.15 250);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: oklch(0.75 0.15 250 / 0.3);
+  color: oklch(0.98 0 0);
+}
+
+/* Smooth font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+

@@ -6,11 +6,11 @@ ROOT_DIR="$(git rev-parse --show-toplevel)"
 echo "Root directory: $ROOT_DIR"
 
 # ============================================
-# (for nodejs) Generate stubs for nodejs-client
+# (for node) Generate stubs for node-client
 # Run from root directory
 # ============================================
-echo "Generating gRPC-Web stubs for nodejs-client..."
-cd "$ROOT_DIR/nodejs-client" || exit 1
+echo "Generating gRPC-Web stubs for node-client..."
+cd "$ROOT_DIR/node-client" || exit 1
 
 # Install project deps first
 npm install
@@ -37,8 +37,8 @@ echo "Generating gRPC stubs for python dist-server..."
 cd "$ROOT_DIR/dist-server"
 source .venv/bin/activate
 uv sync
-python -m grpc_tools.protoc -I=../proto \
+python -m grpc_tools.protoc -I=./proto \
   --python_out=app/ --grpc_python_out=app/ \
-  ../proto/kv.proto
+  ./proto/kv.proto
 
 echo "Done!"

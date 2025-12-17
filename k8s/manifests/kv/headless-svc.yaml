@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-headless
+  namespace: kv
+spec:
+  clusterIP: None
+  selector:
+    app: kv-node
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+    - name: gossip
+      port: 8001
+      targetPort: 8001

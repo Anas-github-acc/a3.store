@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: kv
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ${API_IMAGE}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KV_GRPC_TARGET
+              value: "kv-headless.kv.svc.cluster.local:50051"
