@@ -6,6 +6,8 @@ import threading
 import json
 from grpc_client import get_chunk_hash, fetch_range
 
+from metrics import anti_entropy_runs, anti_entropy_repairs
+
 CHUNK_COUNT = 16         # number of partitions (should match storage & hashing)
 SYNC_INTERVAL = 30       # seconds between full anti-entropy passes
 CHUNK_TIMEOUT = 5        # timeout for chunk hash RPC
@@ -89,6 +91,7 @@ def repair_chunk_from_peer(storage, peer_addr, chunk_id):
         
         if repaired_count > 0:
             log_ae(f"Repaired {repaired_count} keys from chunk {chunk_id} via {peer_addr}", Colors.GREEN)
+        anti_entropy_repairs.inc() # -- prometheus metric
 
     except Exception as e:
         log_ae(f"Repair chunk {chunk_id} from {peer_addr} failed: {e}", Colors.RED)
@@ -117,6 +120,7 @@ def process_single_peer(storage, peer_addr):
 
 
 def anti_entropy_loop(storage, get_peer_list, interval=SYNC_INTERVAL):
+    anti_entropy_runs.inc() # -- prometheus metric
     """
     Background loop:
     - get_peer_list(): must return list of peer addresses like "127.0.0.1:50051"

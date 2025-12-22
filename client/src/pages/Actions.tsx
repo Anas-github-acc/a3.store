@@ -1,298 +1,232 @@
+import { ModernButton } from "@/components/ui/ModernButton";
+import { ModernInput } from "@/components/ui/ModernInput";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { getKey, KeyValueResult, putKey } from "@/api";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowDown, ArrowUp, CheckCircle2, Key, XCircle } from "lucide-react";
 import { useState } from "react";
-import { putKey, getKey } from "../api/api";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
-import { Key, Database, CheckCircle2, XCircle } from "lucide-react";
-
-interface OperationResult {
-  success: boolean;
-  operation: "PUT" | "GET";
-  data?: any;
-  error?: string;
-  timestamp: string;
-}
+import { toast } from "sonner";
 
 export default function Actions() {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [result, setResult] = useState<OperationResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<KeyValueResult | null>(null);
+  const [isPutLoading, setIsPutLoading] = useState(false);
+  const [isGetLoading, setIsGetLoading] = useState(false);
 
   const handlePut = async () => {
     if (!key.trim()) {
-      setResult({
-        success: false,
-        operation: "PUT",
-        error: "Key cannot be empty",
-        timestamp: new Date().toISOString(),
-      });
+      toast.error("Please enter a key");
+      return;
+    }
+    if (!value.trim()) {
+      toast.error("Please enter a value");
       return;
     }
 
+    setIsPutLoading(true);
     try {
-      setLoading(true);
       await putKey(key, value);
-      setResult({
-        success: true,
-        operation: "PUT",
-        data: { key, value },
-        timestamp: new Date().toISOString(),
-      });
-      setValue(""); // Clear value after successful PUT
-    } catch (err: any) {
-      setResult({
-        success: false,
-        operation: "PUT",
-        error: err.message || "Failed to store key-value pair",
-        timestamp: new Date().toISOString(),
-      });
+      toast.success(`Key "${key}" stored successfully`);
+      setResult(null);
+    } catch (error) {
+      toast.error("Failed to store key");
     } finally {
-      setLoading(false);
+      setIsPutLoading(false);
     }
   };
 
   const handleGet = async () => {
     if (!key.trim()) {
-      setResult({
-        success: false,
-        operation: "GET",
-        error: "Key cannot be empty",
-        timestamp: new Date().toISOString(),
-      });
+      toast.error("Please enter a key to retrieve");
       return;
     }
 
+    setIsGetLoading(true);
     try {
-      setLoading(true);
       const res = await getKey(key);
-      setResult({
-        success: true,
-        operation: "GET",
-        data: res,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err: any) {
-      setResult({
-        success: false,
-        operation: "GET",
-        error: err.message || "Failed to retrieve value",
-        timestamp: new Date().toISOString(),
-      });
+      setResult(res);
+      if (!res.found) {
+        toast.error(`Key "${key}" not found`);
+      }
+    } catch (error) {
+      toast.error("Failed to retrieve key");
     } finally {
-      setLoading(false);
+      setIsGetLoading(false);
     }
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">KV Operations</h1>
-        <p className="text-muted-foreground mt-1">
-          Perform PUT and GET operations on the distributed key-value store
-        </p>
-      </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <h1 className="text-3xl font-bold text-foreground">KV Actions</h1>
+        <p className="mt-1 text-muted-foreground">Store and retrieve key-value pairs</p>
+      </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Operations
-            </CardTitle>
-            <CardDescription>
-              Store and retrieve data from the cluster
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="put" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="put">PUT</TabsTrigger>
-                <TabsTrigger value="get">GET</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="put" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="put-key" className="flex items-center gap-2">
-                    <Key className="h-4 w-4" />
-                    Key
-                  </Label>
-                  <Input
-                    id="put-key"
-                    placeholder="Enter key name"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && e.ctrlKey) {
-                        handlePut();
-                      }
-                    }}
-                    className="font-mono"
-                  />
+        {/* Input Form */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <SpotlightCard>
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Key className="h-5 w-5 text-primary" />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="put-value">Value</Label>
-                  <Input
-                    id="put-value"
-                    placeholder="Enter value to store"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && e.ctrlKey) {
-                        handlePut();
-                      }
-                    }}
-                    className="font-mono"
-                  />
-                </div>
+                <h2 className="text-lg font-semibold text-foreground">Key-Value Operations</h2>
+              </div>
 
-                <Button
-                  onClick={handlePut}
-                  disabled={loading}
-                  className="w-full"
-                  size="lg"
-                >
-                  {loading ? "Storing..." : "Store Key-Value Pair"}
-                </Button>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  Press Ctrl+Enter to submit
-                </p>
-              </TabsContent>
-
-              <TabsContent value="get" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="get-key" className="flex items-center gap-2">
-                    <Key className="h-4 w-4" />
-                    Key
-                  </Label>
-                  <Input
-                    id="get-key"
-                    placeholder="Enter key to retrieve"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleGet();
-                      }
-                    }}
-                    className="font-mono"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleGet}
-                  disabled={loading}
-                  className="w-full"
-                  size="lg"
-                  variant="secondary"
-                >
-                  {loading ? "Retrieving..." : "Retrieve Value"}
-                </Button>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  Press Enter to submit
-                </p>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Result</CardTitle>
-            <CardDescription>
-              Response from the cluster
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {result ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {result.success ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                    <span className="font-semibold">
-                      {result.operation} Operation
-                    </span>
-                  </div>
-                  <Badge variant={result.success ? "default" : "destructive"}>
-                    {result.success ? "Success" : "Failed"}
-                  </Badge>
-                </div>
-
-                <Separator />
-
-                {result.success ? (
-                  <div className="space-y-3">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <pre className="text-sm overflow-auto">
-                        {JSON.stringify(result.data, null, 2)}
-                      </pre>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Completed at {new Date(result.timestamp).toLocaleTimeString()}
-                    </p>
-                  </div>
-                ) : (
-                  <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{result.error}</AlertDescription>
-                  </Alert>
-                )}
+                <ModernInput
+                  label="Key"
+                  placeholder="e.g., user:1001"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                />
+                <ModernInput
+                  label="Value"
+                  placeholder="e.g., { 'name': 'Alice' }"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                />
               </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No operations performed yet</p>
-                <p className="text-sm mt-1">
-                  Execute a PUT or GET operation to see results
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <ModernButton
+                  variant="primary"
+                  className="flex-1"
+                  icon={<ArrowUp className="h-4 w-4" />}
+                  onClick={handlePut}
+                  isLoading={isPutLoading}
+                >
+                  PUT
+                </ModernButton>
+                <ModernButton
+                  variant="outline"
+                  className="flex-1"
+                  icon={<ArrowDown className="h-4 w-4" />}
+                  onClick={handleGet}
+                  isLoading={isGetLoading}
+                >
+                  GET
+                </ModernButton>
+              </div>
+
+              {/* API endpoint hint */}
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  API Endpoints:
                 </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {result && (
-        <Card className="border-border/50">
-          <CardHeader>
-            <CardTitle>Operation History</CardTitle>
-            <CardDescription>
-              Latest operation details
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Operation:</span>
-                <span className="font-mono">{result.operation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status:</span>
-                <span className={result.success ? "text-green-500" : "text-red-500"}>
-                  {result.success ? "Success" : "Failed"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Timestamp:</span>
-                <span className="font-mono text-xs">
-                  {new Date(result.timestamp).toLocaleString()}
-                </span>
+                <div className="mt-2 space-y-1 font-mono text-xs text-foreground">
+                  <p><span className="text-primary">PUT</span> /api/kv/:key</p>
+                  <p><span className="text-primary">GET</span> /api/kv/:key</p>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </SpotlightCard>
+        </motion.div>
+
+        {/* Result Panel */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
+          <SpotlightCard className="h-full">
+            <div className="flex h-full flex-col">
+              <h2 className="mb-4 text-lg font-semibold text-foreground">Result</h2>
+
+              <AnimatePresence mode="wait">
+                {result ? (
+                  <motion.div
+                    key="result"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex-1"
+                  >
+                    {/* Status */}
+                    <div className="mb-4 flex items-center gap-2">
+                      {result.found ? (
+                        <>
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                          <span className="text-sm font-medium text-success">Key Found</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-5 w-5 text-destructive" />
+                          <span className="text-sm font-medium text-destructive">Key Not Found</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Key */}
+                    <div className="mb-3">
+                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Key
+                      </p>
+                      <p className="mt-1 font-mono text-sm text-foreground">{result.key}</p>
+                    </div>
+
+                    {/* Value */}
+                    {result.found && result.value && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Value
+                        </p>
+                        <pre className="mt-1 max-h-60 overflow-auto rounded-lg bg-muted/50 p-3 font-mono text-xs text-foreground scrollbar-thin">
+                          {formatValue(result.value)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    {result.timestamp && (
+                      <p className="mt-4 text-xs text-muted-foreground">
+                        Retrieved at: {new Date(result.timestamp).toLocaleString()}
+                      </p>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-1 items-center justify-center"
+                  >
+                    <div className="text-center">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <ArrowDown className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Execute a GET operation to see results here
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </SpotlightCard>
+        </motion.div>
+      </div>
     </div>
   );
+}
+
+function formatValue(value: string): string {
+  try {
+    const parsed = JSON.parse(value);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return value;
+  }
 }

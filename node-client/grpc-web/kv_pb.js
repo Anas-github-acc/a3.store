@@ -870,7 +870,8 @@ proto.kv.KeyValuePair.prototype.toObject = function(opt_includeInstance) {
 proto.kv.KeyValuePair.toObject = function(includeInstance, msg) {
   var f, obj = {
 key: jspb.Message.getFieldWithDefault(msg, 1, ""),
-value: jspb.Message.getFieldWithDefault(msg, 2, "")
+value: jspb.Message.getFieldWithDefault(msg, 2, ""),
+modifiedAt: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -915,6 +916,10 @@ proto.kv.KeyValuePair.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {string} */ (reader.readString());
       msg.setValue(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setModifiedAt(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -958,6 +963,13 @@ proto.kv.KeyValuePair.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getModifiedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -994,6 +1006,24 @@ proto.kv.KeyValuePair.prototype.getValue = function() {
  */
 proto.kv.KeyValuePair.prototype.setValue = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional int64 modified_at = 3;
+ * @return {number}
+ */
+proto.kv.KeyValuePair.prototype.getModifiedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.kv.KeyValuePair} returns this
+ */
+proto.kv.KeyValuePair.prototype.setModifiedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
 };
 
 

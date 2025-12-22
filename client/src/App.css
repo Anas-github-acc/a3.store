@@ -1,49 +1,42 @@
-/* App-specific styles - most styling is handled by Tailwind and shadcn */
-
 #root {
-  width: 100%;
-  min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-/* Scrollbar styling for dark theme */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-::-webkit-scrollbar-track {
-  background: oklch(0.16 0 0);
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: oklch(0.30 0 0);
-  border-radius: 4px;
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.40 0 0);
+.card {
+  padding: 2em;
 }
 
-/* Smooth transitions for interactive elements */
-button, a, input, select, textarea {
-  transition: all 0.2s ease;
+.read-the-docs {
+  color: #888;
 }
-
-/* Focus styles for accessibility */
-*:focus-visible {
-  outline: 2px solid oklch(0.75 0.15 250);
-  outline-offset: 2px;
-}
-
-/* Selection styling */
-::selection {
-  background: oklch(0.75 0.15 250 / 0.3);
-  color: oklch(0.98 0 0);
-}
-
-/* Smooth font rendering */
-body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-

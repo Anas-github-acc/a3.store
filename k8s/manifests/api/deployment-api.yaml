@@ -4,7 +4,7 @@ metadata:
   name: api
   namespace: kv
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: api
@@ -15,9 +15,17 @@ spec:
     spec:
       containers:
         - name: api
-          image: ${API_IMAGE}
+          image: anasahamad/a3store-api:v1
           ports:
             - containerPort: 8080
           env:
             - name: KV_GRPC_TARGET
               value: "kv-headless.kv.svc.cluster.local:50051"
+          # Resource requests and limits - due to error
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"

@@ -1,0 +1,40 @@
+service:
+  type: LoadBalancer # your "NLB" endpoint
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing" # public NLB
+
+    # in minikube we'll use minikube tunnel to get a LoadBalancer IP
+
+    # Optional: If you want the NLB to be cross-zone (usually good for production)
+    # service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+ports:
+  web:
+    # redirectTo: websecure # -- redirect HTTP to HTTPS (now no need for HTTP listener)
+    port: 8080 # Traefik internal port
+    expose:
+      default: true
+    exposedPort: 80 # NLB listener port
+    protocol: TCP
+    nodePort: 30080 # our fixed nodePort for HTTP
+  websecure:
+    port: 8443 # Traefik internal port
+    expose:
+      default: true
+    exposedPort: 443 # NLB listener port
+    protocol: TCP
+    nodePort: 30443 # our fixed nodePort for HTTPS3
+
+  # The Dashboard/API EntryPoint (Internal 9000)
+  # explicitly set to 9000 to avoid "duplicate 8080" error
+  traefik:
+    port: 9000
+    expose:
+      default: false # not exposed to the NLB by default
+    exposedPort: 9000
+    protocol: TCP
+
+ingressclass:
+  enabled: true
+  isdefaultclass: true

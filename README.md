@@ -375,12 +375,9 @@ dist-redis/
 
 | Concept | Implementation |
 |---------|----------------|
-| **Consistent Hashing** | Hash-based key distribution across ring |
 | **Gossip Protocol** | Decentralized membership via heartbeats |
-| **Eventual Consistency** | Async replication with LWW conflict resolution |
-| **Anti-Entropy** | Merkle-tree-style chunk hash comparison |
-| **Replication** | Configurable N-way replication |
-| **Partition Tolerance** | System operates during network splits |
+| **Eventual Consistency** | sync replication to guarantee store |
+| **Anti-Entropy** | chunk hash key method for anti-entropy |
 | **Self-Healing** | Automatic data repair after failures |
 
 ---

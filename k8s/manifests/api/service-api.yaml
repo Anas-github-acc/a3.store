@@ -1,11 +1,11 @@
 apiVersion: v1
-king: Service
+kind: Service
 metadata:
   name: api-service
   namespace: kv
 
 spec:
-  type: clusterIP
+  type: ClusterIP
   selector:
     app: api
   ports:

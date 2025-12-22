@@ -16,8 +16,7 @@ spec:
     spec:
       containers:
         - name: kv-node
-          # image: ${KV_IMAGE:-dist-kv:latest}
-          image: ${KV_NODE_IMAGE}
+          image: anasahamad/a3store-kv-node:v1
           ports:
             - containerPort: 50051
               name: grpc

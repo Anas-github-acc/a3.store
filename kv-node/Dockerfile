@@ -18,7 +18,7 @@ COPY uv.lock .
 RUN /root/.local/bin/uv sync --frozen
 
 # Copy proto definitions
-COPY ../proto /app/proto
+COPY proto /app/proto
 
 # Copy actual application code
 COPY . .

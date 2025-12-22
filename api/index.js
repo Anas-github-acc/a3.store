@@ -1,6 +1,7 @@
 import express from "express";
 import grpc from "@grpc/grpc-js";
 import protoLoader from "@grpc/proto-loader";
+import axios from "axios";
 
 const app = express();
 app.use(express.json());
@@ -103,23 +104,161 @@ app.get("/api/cluster/health", async (_, res) => {
   }
 });
 
+app.get("/api/cluster/pod-lifecycle", async (_, res) => {
+  try {
+    const queries = {
+      restarts: `kube_pod_container_status_restarts_total{namespace="kv"}`,
+      running: `kube_pod_container_status_running{namespace="kv"}`,
+      phases: `kube_pod_status_phase{namespace="kv"}`
+    };
+
+    // helper function
+    const execQuery = async (query) => {
+      const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
+        params: { query }
+      });
+      return r.data.data.result;
+    };
+
+    const restarts = await execQuery(queries.restarts);
+    const running = await execQuery(queries.running);
+    const phases = await execQuery(queries.phases);
+
+    const pods = {};
+
+    // parse restart count
+    restarts.forEach(({ metric, value }) => {
+      const pod = metric.pod;
+      pods[pod] = pods[pod] || {};
+      pods[pod].restarts = Number(value[1]);
+    });
+
+    // parse running state
+    running.forEach(({ metric, value }) => {
+      const pod = metric.pod;
+      pods[pod] = pods[pod] || {};
+      pods[pod].running = value[1] === "1";
+    });
+
+    // parse pod phases
+    phases.forEach(({ metric, value }) => {
+      if (value[1] === "1") {
+        const pod = metric.pod;
+        pods[pod] = pods[pod] || {};
+        pods[pod].phase = metric.phase;   // "Running", "Pending", etc
+      }
+    });
+
+    // build output array
+    const result = Object.entries(pods).map(([pod, state]) => ({
+      pod,
+      running: state.running || false,
+      restarts: state.restarts || 0,
+      phase: state.phase || "Unknown"
+    }));
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch pod lifecycle data",
+      details: err.message
+    });
+  }
+});
+
+
 
 /* ------------------ METRICS ------------------ */
 // Prometheus summary
 app.get("/api/metrics/summary", async (_, res) => {
   try {
-    const q = `sum(kv_grpc_requests_total)`;
-    const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
-      params: { query: q }
-    });
+    const queries = {
+      // Node health
+      nodes_up: 'count(kv_node_up == 1)',
+      nodes_total: 'count(kv_node_up)',
+      // gRPC metrics
+      grpc_requests_total: 'sum(kv_grpc_requests_total)',
+      grpc_requests_by_method: 'sum by (method) (kv_grpc_requests_total)',
+      grpc_errors_total: 'sum(kv_grpc_errors_total)',
+      grpc_errors_by_method: 'sum by (method) (kv_grpc_errors_total)',
+      grpc_latency_avg: 'avg(rate(kv_grpc_latency_seconds_sum[5m]) / rate(kv_grpc_latency_seconds_count[5m]))',
+      // Replication metrics
+      replication_attempts_total: 'sum(kv_replication_attempts_total)',
+      replication_failures_total: 'sum(kv_replication_failures_total)',
+      // Anti-entropy metrics
+      anti_entropy_runs_total: 'sum(kv_anti_entropy_runs_total)',
+      anti_entropy_repaired_total: 'sum(kv_anti_entropy_keys_repaired_total)',
+    };
 
-    res.json({
-      grpc_requests_total: r.data.data.result[0]?.value?.[1] || 0
-    });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch metrics" });
+    const results = {};
+
+    for (const [key, query] of Object.entries(queries)) {
+      const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
+        params: { query }
+      });
+
+      const result = r.data.data.result;
+      if (result.length === 0) {
+        results[key] = key.includes('_by_method') ? {} : 0;
+      } else if (key.includes('_by_method')) {
+        results[key] = result.reduce((acc, item) => {
+          acc[item.metric.method] = Number(item.value[1]);
+          return acc;
+        }, {});
+      } else {
+        results[key] = Number(result[0]?.value?.[1] || 0);
+      }
+    }
+
+    res.json(results);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch metrics", details: e.message });
   }
 });
+
+/* ------------------ resources usage ------------------ */
+app.get("/api/nodes/resources", async (_, res) => {
+  const queries = {
+    cpu: `
+      sum by (pod) (
+        rate(container_cpu_usage_seconds_total{
+          namespace="kv",
+          container!="POD"
+        }[2m])
+      )
+    `,
+    memory: `
+      sum by (pod) (
+        container_memory_usage_bytes{
+          namespace="kv",
+          container!="POD"
+        }
+      )
+    `
+  };
+
+  try {
+    const results = {};
+
+    for (const [name, query] of Object.entries(queries)) {
+      const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
+        params: { query }
+      });
+
+      results[name] = r.data.data.result.map(item => ({
+        pod: item.metric.pod,
+        value: Number(item.value[1])
+      }));
+    }
+
+    res.json(results);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 /* ------------------ ANTI-ENTROPY ------------------ */
 
@@ -159,7 +298,11 @@ app.get("/api/anti-entropy/events", (_, res) => {
 
 
 app.get("/healthz", (_, res) => {
-  res.json({ status: "ok" });
+  res.json({
+      status: "ok",
+      a3store_version: "v1.0.0",
+      timestamp: Date.now()
+  });
 });
 
 const PORT = 8080;

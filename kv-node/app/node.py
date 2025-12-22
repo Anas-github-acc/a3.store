@@ -7,29 +7,22 @@ from grpc_server import serve_grpc
 from anti_entropy import start_anti_entropy
 from storage import Storage
 
+from metrics import node_up
+
 
 # ---------------------
 # CONFIGURATION
 # ---------------------
 
-# Debug logging
 DEBUG_LOG = os.environ.get("DEBUG_LOG", "false").lower() == "true"
-
-# Ports
 GRPC_PORT = int(os.environ.get("GRPC_PORT", "50051"))
 GOSSIP_PORT = int(os.environ.get("GOSSIP_PORT", "8001"))
-
-# Node identity
 NODE_NUM = os.environ.get("NODE_NUM", "1")
 OWN_ID = f"node-{NODE_NUM}"
 
 # Docker automatically sets HOSTNAME to container name
 HOSTNAME = os.environ.get("HOSTNAME", f"node{NODE_NUM}")
-
-# Internal gRPC address for this node
 OWN_ADDR = f"{HOSTNAME}:{GRPC_PORT}"
-
-# Data directory
 DATA_DIR = os.environ.get("DATA_DIR", f"data/node{NODE_NUM}")
 
 # ---------------------
@@ -39,7 +32,7 @@ PEERS_ENV = os.environ.get("PEERS", "")
 if PEERS_ENV:
     PEERS = [p.strip() for p in PEERS_ENV.split(",") if p.strip()]
 else:
-    PEERS = []  # No localhost defaults
+    PEERS = []
 
 # Remove own GRPC address if present
 # PEERS = [p for p in PEERS if not p.endswith(str(GRPC_PORT))]
@@ -52,7 +45,7 @@ GOSSIP_PEERS_ENV = os.environ.get("GOSSIP_PEERS", "")
 if GOSSIP_PEERS_ENV:
     GOSSIP_PEERS = [p.strip() for p in GOSSIP_PEERS_ENV.split(",") if p.strip()]
 else:
-    GOSSIP_PEERS = []  # No localhost defaults
+    GOSSIP_PEERS = []
 
 GOSSIP_PEERS = [p for p in GOSSIP_PEERS if not p.endswith(str(GOSSIP_PORT))]
 
@@ -77,7 +70,7 @@ def start_gossip_http_server():
     t.start()
     print(f"[gossip] HTTP server running on port {GOSSIP_PORT}")
 
-def main():
+def main():    
     print("--- Starting Distributed KV Node ---")
     print(f"Node ID: {OWN_ID}")
     print(f"gRPC port: {GRPC_PORT}")
@@ -113,4 +106,5 @@ def main():
 
 
 if __name__ == "__main__":
+    node_up.labels(node_id=OWN_ID).set(1) # -- prometheus metric
     main()

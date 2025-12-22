@@ -1,0 +1,16 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: main-route
+  namespace: kv
+spec:
+  entryPoints:
+    - web        # Port 80
+    - websecure  # Port 443 (recommended: have to enable TLS configured)
+  routes:
+    # - match: Host(`{{ aws provided dns name }}`) && PathPrefix(`/api`)
+    - match: PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: api-service
+          port: 80

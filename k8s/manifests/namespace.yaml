@@ -6,4 +6,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ingress-nginx
+  name: traefik
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring

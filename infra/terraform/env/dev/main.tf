@@ -100,7 +100,7 @@ resource "aws_security_group" "node_sg" {
   }
 
   # allow kubelet / nodeport health from the NLB (NLB uses peer ephemeral IPs)
-  # NOTE: NLB doesn't have SG, so this allows any public -> nodePort on 0.0.0.0/0 for the nodePort
+  # NOTE: NLB doesn't have SG, so this allows any public -> nodePort on 0.0.0.0/0 for nodePort (30080/30443)
   # For tighter security, restrict to known client IP ranges or use WAF/ALB
   ingress {
     description = "allow nginx nodeport HTTP"

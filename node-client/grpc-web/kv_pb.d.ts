@@ -97,6 +97,9 @@ export class KeyValuePair extends jspb.Message {
   getValue(): string;
   setValue(value: string): KeyValuePair;
 
+  getModifiedAt(): number;
+  setModifiedAt(value: number): KeyValuePair;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): KeyValuePair.AsObject;
   static toObject(includeInstance: boolean, msg: KeyValuePair): KeyValuePair.AsObject;
@@ -109,6 +112,7 @@ export namespace KeyValuePair {
   export type AsObject = {
     key: string,
     value: string,
+    modifiedAt: number,
   }
 }
 

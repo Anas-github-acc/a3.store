@@ -2,8 +2,11 @@ import os
 import time
 import threading
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
+
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from metrics import gossip_messages
 
 app = FastAPI()
 
@@ -27,6 +30,32 @@ class GossipPayload(BaseModel):
     addr: str
     heartbeat: int
 
+# ----------------------------------------------------------------------------
+# ------        Will move it to a separate http metrics server         -------
+# ------   currently our gossip server are so tiny including no cpu    -------    
+# ------ bound process, no network io blocking and very light requests -------
+# ----------------------------------------------------------------------------
+# make changes in k8s deployment when moving to a separate server
+# expose metrics port 9100 in addition to gossip port 8001 or
+# ports:
+#   - containerPort: 50051
+#     name: grpc
+#   - containerPort: 8001
+#     name: gossip
+#   - containerPort: 9100
+#     name: metrics
+# -----------------------------------------------------------------------------
+
+@app.get("/metrics")
+def metrics():
+    return Response(
+        generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
+
+# -----------------------------------------------------------------------------
+
+
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
@@ -41,6 +70,7 @@ def receive_gossip(payload: GossipPayload):
     Receive gossip update.
     Merge sender's heartbeat into local membership map.
     """
+    gossip_messages.inc()
     existing = membership.get(payload.node_id)
 
     if (existing is None) or (payload.heartbeat > existing.get("hb", 0)):
