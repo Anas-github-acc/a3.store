@@ -60,7 +60,7 @@ export function ArchitectureDiagram() {
           {/* Ingress Controller */}
           <g transform="translate(420, 55)">
             <rect x="0" y="0" width="140" height="50" rx="6" fill="hsl(var(--card))" stroke="hsl(var(--border))" strokeWidth="1.5" />
-            <text x="70" y="30" textAnchor="middle" fill="hsl(var(--foreground))" fontSize="11">Nginx Ingress</text>
+            <text x="70" y="30" textAnchor="middle" fill="hsl(var(--foreground))" fontSize="11">Traefik</text>
           </g>
 
           {/* Arrow from NLB to Ingress */}
@@ -175,7 +175,15 @@ export function ArchitectureDiagram() {
         </svg>
 
         <p className="text-center text-muted-foreground text-sm mt-6">
-          Replace this placeholder with your own architecture diagram
+          you can test this on your local machine with minikube!<br />
+          <a
+            href="https://github.com/Anas-github-acc/a3.store.git"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline ml-1"
+          >
+            View the GitHub repository
+          </a>
         </p>
       </div>
     </motion.div>
