@@ -6,6 +6,18 @@ import axios from "axios";
 const app = express();
 app.use(express.json());
 
+// CORS middleware: allow Vite dev origin or configurable origin via env
+app.use((req, res, next) => {
+  const allowed = process.env.CORS_ALLOWED_ORIGIN || '*';
+  res.header('Access-Control-Allow-Origin', allowed);
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 const KV_TARGET =
   process.env.KV_GRPC_TARGET ||
   "kv-headless.kv.svc.cluster.local:50051";
@@ -16,10 +28,10 @@ const GOSSIP_HTTP =
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ||
-  "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090";
+  "http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090";
 
-// const LOKI_URL = process.env.LOKI_URL ||
-//   "http://loki.monitoring.svc.cluster.local:3100";
+const LOKI_URL = process.env.LOKI_URL ||
+  "http://loki.monitoring.svc.cluster.local:3100";
 
 // ----- GRPC Client Setup -----
 const packageDef = protoLoader.loadSync("./proto/kv.proto", {
@@ -42,8 +54,8 @@ const kvClient = new kvProto.KeyValue(
 
 
 /* ------------------- KV Routes ------------------- */
-// PUT
-app.post("/api/kv/:key", (req, res) => {
+// KV store: support PUT (idempotent) and keep POST as alias for compatibility
+function handlePutKey(req, res) {
   const { key } = req.params;
   const { value } = req.body;
 
@@ -58,7 +70,10 @@ app.post("/api/kv/:key", (req, res) => {
       res.json({ status: "ok" });
     }
   );
-});
+}
+
+app.put("/api/kv/:key", handlePutKey);
+app.post("/api/kv/:key", handlePutKey); // keep POST working for older callers
 
 // GET
 app.get("/api/kv/:key", (req, res) => {
@@ -262,40 +277,53 @@ app.get("/api/nodes/resources", async (_, res) => {
 
 /* ------------------ ANTI-ENTROPY ------------------ */
 
-// Placeholder (log-backed later)
-app.get("/api/anti-entropy/events", (_, res) => {
-  res.json([
-    {
-      event: "ANTI_ENTROPY_REPAIR",
-      node: "node-1",
-      chunk: 4,
-      keys: 8,
-      timestamp: Date.now() - 60000
-    }
-  ]);
-});
-// app.get("/api/anti-entropy/events", async (_, res) => {
-//   try {
-//     const query = '{component="anti-entropy"}';
-//     const r = await axios.get(`${LOKI_URL}/loki/api/v1/query_range`, {
-//       params: {
-//         query,
-//         limit: 20,
-//         direction: "BACKWARD"
-//       }
-//     });
-
-//     const events = r.data.data.result.flatMap(stream =>
-//       stream.values.map(([ts, line]) => JSON.parse(line))
-//     );
-
-//     res.json(events);
-//   } catch (e) {
-//     res.status(500).json({ error: "Failed to fetch anti-entropy events" });
-//   }
+// app.get("/api/anti-entropy/events", (_, res) => {
+//   res.json([
+//     {
+//       event: "ANTI_ENTROPY_REPAIR",
+//       node: "node-1",
+//       chunk: 4,
+//       keys: 8,
+//       timestamp: Date.now() - 60000
+//     }
+//   ]);
 // });
 
+app.get("/api/anti-entropy/events", async (_, res) => {
+  try {
+    const now = Date.now() * 1e6;
+    const fifteenMinAgo = now - 15 * 60 * 1e9;
 
+    const query = '{app="kv-node"} |= "anti-entropy" | json | line_format "{{.log}}" | json';
+
+    const r = await axios.get(
+      `${LOKI_URL}/loki/api/v1/query_range`,
+      {
+        params: {
+          query,
+          start: fifteenMinAgo,
+          end: now,
+          limit: 50,
+          direction: "BACKWARD"
+        }
+      }
+    );
+
+    const events = r.data.data.result.flatMap(stream =>
+      stream.values.map(([ts, line]) => JSON.parse(line))
+    );
+
+    res.json(events);
+  } catch (e) {
+    res.status(500).json({
+      error: "Failed to fetch anti-entropy events",
+      details: e.message
+    });
+  }
+});
+
+
+/* ------------------ HEALTHCHECK ------------------ */
 
 app.get("/healthz", (_, res) => {
   res.json({

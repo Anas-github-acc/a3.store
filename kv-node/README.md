@@ -16,67 +16,96 @@ A distributed key-value store with gossip-based membership, consistent hashing, 
 
 ## Quick Start
 
-### 1. Setup Virtual Environment
+### Option 1: Docker (Recommended)
+
+The easiest way to run a 3-node cluster with Docker:
+We have provided [docker.sh](docker.sh) script in the /scripts directory at the root level
 
 ```bash
-cd dist-server
+./docker.sh
+```
+
+This will automatically:
+- remove all previous docker container running on node1, node2 node3
+- Build the Docker image
+- Create a Docker network (`kvnet`)
+- Start 3 nodes (node1, node2, node3) with replication factor 2
+- Enable DEBUG_LOG by default
+
+**Docker Commands:**
+```bash
+# Start the cluster
+./docker.sh
+
+# Clean up containers and volumes only
+./docker.sh clean
+
+# View logs
+docker logs -f node1
+docker logs -f node2
+docker logs -f node3
+
+# Stop and remove containers
+docker rm -f node1 node2 node3
+```
+
+> 💡 **Tip:** To customize node configurations (ports, environment variables, etc.), check the [docker.sh](docker.sh) script.
+
+### Option 2: Interactive CLI Setup
+
+For more control over individual node configurations, use the interactive CLI script:
+
+#### 1. Setup Virtual Environment
+
+```bash
+cd kv-store
 # (recommended)
 uv venv .venv
 source .venv/bin/activate
-uv sync
+uv sync --active
 # or
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Start Nodes
+#### 2. Start Nodes
 
-Open **separate terminal windows** for each node:
+The `kvrun.sh` script provides an interactive CLI that prompts you for node configuration. Open **separate terminal windows** for each node:
 
 ```bash
 # Terminal 1
-./run-server.sh
-# Enter: Node number: 1, Total nodes: 3, Replication factor: 2
+./kvrun.sh
+# The script will prompt:
+# - Node number: 1
+# - Total nodes: 3
+# - Replication factor: 2
 
 # Terminal 2
-./run-server.sh
+./kvrun.sh
+# - Node number: 2
+# - Total nodes: 3
+# - Replication factor: 2
+
+# Terminal 3
+./kvrun.sh
+# - Node number: 3
+# - Total nodes: 3
+# - Replication factor: 2
+```
+
+This interactive approach allows you to:
+- Configure each node individually
+- Adjust total node count dynamically
+- Set custom replication factors per deployment
 # Enter: Node number: 2, Total nodes: 3, Replication factor: 2
 
 # Terminal 3
-./run-server.sh
+./kvrun.sh
 # Enter: Node number: 3, Total nodes: 3, Replication factor: 2
 ```
 
 ---
-
-## ⚠️ Important Warnings & Configuration
-
-### Replication Factor Rules
-
-| Replication Factor | Minimum Nodes Required | Fault Tolerance |
-|--------------------|------------------------|-----------------|
-| 1                  | 1                      | 0 node failures |
-| 2                  | 2                      | 1 node failure  |
-| 3                  | 3                      | 2 node failures |
-| N                  | N                      | N-1 failures    |
-
-> **⚠️ WARNING:** Replication factor **MUST NOT exceed** the total number of nodes in the cluster!
-
-```
-❌ INVALID: 2 nodes with replication factor 3
-✅ VALID:   3 nodes with replication factor 2
-✅ VALID:   3 nodes with replication factor 3
-```
-
-### Cluster Sizing Recommendations
-
-| Use Case | Nodes | Replication Factor | Notes |
-|----------|-------|-------------------|-------|
-| Development | 1 | 1 | No fault tolerance |
-| Testing | 3 | 2 | Can survive 1 node failure |
-| Production (minimal) | 3 | 3 | Can survive 2 node failures |
-| Production (recommended) | 5 | 3 | Better load distribution |
 
 ### Port Allocation
 
@@ -96,58 +125,6 @@ Check port availability:
 # Check if port is in use
 lsof -i :50051
 lsof -i :8001
-```
-
----
-
-## Configuration Examples
-
-### Example 1: Minimal Development Setup (1 Node)
-
-```bash
-./run-server.sh
-# Node number: 1
-# Total nodes: 1
-# Replication factor: 1
-```
-
-> ⚠️ **No fault tolerance** - data loss if node crashes!
-
-### Example 2: Standard 3-Node Cluster
-
-**Terminal 1:**
-```bash
-./run-server.sh
-# Node number: 1
-# Total nodes: 3
-# Replication factor: 2
-```
-
-**Terminal 2:**
-```bash
-./run-server.sh
-# Node number: 2
-# Total nodes: 3
-# Replication factor: 2
-```
-
-**Terminal 3:**
-```bash
-./run-server.sh
-# Node number: 3
-# Total nodes: 3
-# Replication factor: 2
-```
-
-### Example 3: High Availability 5-Node Cluster
-
-Start 5 terminals with node numbers 1-5:
-```bash
-# Each terminal:
-./run-server.sh
-# Node number: [1-5]
-# Total nodes: 5
-# Replication factor: 3
 ```
 
 ---
@@ -222,6 +199,21 @@ cd app && python node.py
 
 ## Troubleshooting
 
+### Rebuild & Redeploy (Kubernetes)
+
+If you change the `Dockerfile` (for example to run the node as a single process so Prometheus metrics are exposed reliably), rebuild and push the image and then rollout the StatefulSet:
+
+```bash
+# Build and push (example using your existing script)
+VERSION="v1.0.2" ./scripts/dockerupload.sh build
+VERSION="v1.0.2" ./scripts/dockerupload.sh push
+
+# Update image tag in k8s/manifests/kv/statefulset-kv.yaml and apply
+kubectl -n kv apply -f k8s/manifests/kv/statefulset-kv.yaml
+```
+
+After redeploy, verify metrics are scraped by Prometheus and `/api/metrics/summary` returns non-zero values.
+
 ### "Address already in use"
 
 ```bash
@@ -233,7 +225,6 @@ kill -9 <PID>
 ### Nodes not discovering each other
 
 1. Ensure all nodes use the same `TOTAL_NODES` value
-2. Check firewall settings
 3. Verify gossip ports are accessible
 
 ### Data inconsistency after restart

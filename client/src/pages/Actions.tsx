@@ -11,6 +11,7 @@ export default function Actions() {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [result, setResult] = useState<KeyValueResult | null>(null);
+  const [searchedKey, setSearchedKey] = useState<string>("");
   const [isPutLoading, setIsPutLoading] = useState(false);
   const [isGetLoading, setIsGetLoading] = useState(false);
 
@@ -46,6 +47,7 @@ export default function Actions() {
     try {
       const res = await getKey(key);
       setResult(res);
+      setSearchedKey(key);
       if (!res.found) {
         toast.error(`Key "${key}" not found`);
       }
@@ -173,7 +175,7 @@ export default function Actions() {
                       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Key
                       </p>
-                      <p className="mt-1 font-mono text-sm text-foreground">{result.key}</p>
+                      <p className="mt-1 font-mono text-sm text-foreground">{searchedKey}</p>
                     </div>
 
                     {/* Value */}
@@ -188,10 +190,15 @@ export default function Actions() {
                       </div>
                     )}
 
-                    {/* Timestamp */}
-                    {result.timestamp && (
+                    {/* Modified At & Owner */}
+                    {result.modified_at && (
                       <p className="mt-4 text-xs text-muted-foreground">
-                        Retrieved at: {new Date(result.timestamp).toLocaleString()}
+                        Modified at: {new Date(Number(result.modified_at)).toLocaleString()}
+                      </p>
+                    )}
+                    {result.own_id && (
+                      <p className="mt-1 text-xs text-muted-foreground font-mono">
+                        Owner: {result.own_id}
                       </p>
                     )}
                   </motion.div>

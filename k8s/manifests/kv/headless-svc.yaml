@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: kv-headless
   namespace: kv
+  labels:
+    app: kv-node
 spec:
   clusterIP: None
   selector:

@@ -1,14 +1,28 @@
 #!/bin/bash
+# 
+# this is a script to build and run the kv-node docker containers for a 3-node cluster
+# 
+
+cd "$(dirname "$0")/../kv-node"
 
 set -e
 
-echo "[*] Cleaning up existing containers"
-docker rm -f node1 node2 node3 2>/dev/null || true
+if [ "$1" = "clean" ]; then
+  echo "[*] Cleaning up containers and volumes"
+  docker rm -f node1 node2 node3 2>/dev/null || true
+  docker volume rm kv1 kv2 kv3 2>/dev/null || true
+  echo "[*] Cleanup complete"
+  exit 0
+fi
 
-# echo "[*] Building Docker image for KV Node"
-docker build -t kv-node:latest .
 
-# echo "[*] Running KV Node container"
+if [ "$1" != "clean" ]; then
+  if [ "$1" != "nobuild" ]; then
+    echo "[*] Cleaning up existing containers"
+    docker rm -f node1 node2 node3 2>/dev/null || true
+
+    docker build -t a3store-kv-node:latest .
+  fi
 docker network create kvnet || true
 
 docker run -d --name node1 --network kvnet \
@@ -23,7 +37,7 @@ docker run -d --name node1 --network kvnet \
   -e REPLICATION_FACTOR=2 \
   -e DATA_DIR=/app/data/node1 \
   -v kv1:/app/data \
-  kv-node
+  a3store-kv-node
 echo "[*] KV Node container 'node1' is running"
 
 docker run -d --name node2 --network kvnet \
@@ -38,7 +52,7 @@ docker run -d --name node2 --network kvnet \
   -e REPLICATION_FACTOR=2 \
   -e DATA_DIR=/app/data/node2 \
   -v kv2:/app/data \
-  kv-node
+  a3store-kv-node
 echo "[*] KV Node container 'node2' is running"
 
 docker run -d --name node3 --network kvnet \
@@ -53,5 +67,6 @@ docker run -d --name node3 --network kvnet \
   -e REPLICATION_FACTOR=2 \
   -e DATA_DIR=/app/data/node3 \
   -v kv3:/app/data \
-  kv-node
+  a3store-kv-node
 echo "[*] KV Node container 'node3' is running"
+fi

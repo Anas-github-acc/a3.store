@@ -1,6 +1,20 @@
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { getClusterHealth, getMetricsSummary, ClusterHealth, MetricsSummary } from "@/api";
+import { AntiEntropyTerminal } from "@/components/dashboard/AntiEntropyTerminal";
+import { NodeResources } from "@/components/dashboard/NodeResources";
+import { PodLifecycle } from "@/components/dashboard/PodLifecycle";
+import { 
+  getClusterHealth, 
+  getMetricsSummary, 
+  getAntiEntropyEvents,
+  getNodeResources,
+  getPodLifecycle,
+  ClusterHealth, 
+  MetricsSummary,
+  AntiEntropyEvent,
+  NodeResources as NodeResourcesType,
+  PodLifecycle as PodLifecycleType
+} from "@/api";
 import { motion } from "framer-motion";
 import { Activity, AlertTriangle, ArrowDownUp, Database, GitBranch, RefreshCw, Server, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -21,6 +35,9 @@ const item = {
 export default function Dashboard() {
   const [health, setHealth] = useState<ClusterHealth | null>(null);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
+  const [antiEntropyEvents, setAntiEntropyEvents] = useState<AntiEntropyEvent[]>([]);
+  const [nodeResources, setNodeResources] = useState<NodeResourcesType | null>(null);
+  const [podLifecycle, setPodLifecycle] = useState<PodLifecycleType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,12 +45,18 @@ export default function Dashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      const [healthData, metricsData] = await Promise.all([
+      const [healthData, metricsData, eventsData, resourcesData, podsData] = await Promise.all([
         getClusterHealth(),
         getMetricsSummary(),
+        getAntiEntropyEvents().catch(() => []),
+        getNodeResources().catch(() => null),
+        getPodLifecycle().catch(() => []),
       ]);
       setHealth(healthData);
       setMetrics(metricsData);
+      setAntiEntropyEvents(eventsData);
+      setNodeResources(resourcesData);
+      setPodLifecycle(podsData);
     } catch (err) {
       setError("Failed to fetch cluster data");
       console.error(err);
@@ -187,12 +210,32 @@ export default function Dashboard() {
         </SpotlightCard>
       </motion.div>
 
+      {/* Anti-Entropy Terminal & Resources */}
+      <motion.div
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.4 }}
+      >
+        <AntiEntropyTerminal events={antiEntropyEvents} isLoading={isLoading} />
+        <NodeResources resources={nodeResources} isLoading={isLoading} />
+      </motion.div>
+
+      {/* Pod Lifecycle */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.4 }}
+      >
+        <PodLifecycle pods={podLifecycle} isLoading={isLoading} />
+      </motion.div>
+
       {/* Timestamp */}
       {health?.timestamp && (
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.7 }}
           className="text-center text-xs text-muted-foreground"
         >
           Last updated: {new Date(health.timestamp).toLocaleString()}

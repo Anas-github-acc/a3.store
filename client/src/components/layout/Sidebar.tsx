@@ -41,9 +41,7 @@ export function Sidebar() {
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-glow-secondary">
-              <Database className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/a3store-icon.svg" alt="a3.redis Logo" className="w-[2.2rem] h-auto" height={70} width={70} />
             <div>
               <h1 className="text-base font-semibold text-foreground">a3.redis</h1>
               <p className="text-xs text-muted-foreground">Distributed KV</p>
@@ -75,7 +73,7 @@ export function Sidebar() {
                 {/* Active indicator */}
                 {isActive && (
                   <motion.div
-                    className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+                    className="absolute left-0 inset-y-0 my-auto h-8 w-1 rounded-r-full bg-primary"
                     layoutId="activeIndicator"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                   />

@@ -41,7 +41,7 @@ export interface MetricsSummary {
   grpc_requests_by_method: Record<string, number>;
   grpc_errors_total: number;
   grpc_errors_by_method: Record<string, number>;
-  grpc_latency_avg: number;
+  grpc_latency_avg: number | null;
   replication_attempts_total: number;
   replication_failures_total: number;
   anti_entropy_runs_total: number;
@@ -51,6 +51,7 @@ export interface MetricsSummary {
 }
 
 export interface AntiEntropyEvent {
+  component?: string;
   event: string;
   node: string;
   chunk: number;
@@ -59,10 +60,10 @@ export interface AntiEntropyEvent {
 }
 
 export interface KeyValueResult {
-  key: string;
   value: string | null;
   found: boolean;
-  timestamp?: string;
+  modified_at?: string | number;
+  own_id?: string;
 }
 
 export interface NodeResourceUsage {
@@ -84,6 +85,8 @@ export interface PodLifecycle {
 
 export interface HealthzResponse {
   status: string;
+  a3store_version?: string;
+  timestamp?: number;
 }
 
 // GET /api/cluster/health - Get cluster health summary
@@ -143,24 +146,21 @@ export async function putKey(
 export async function getKey(key: string): Promise<KeyValueResult> {
   try {
     const response = await fetch(`${API_BASE}/api/kv/${encodeURIComponent(key)}`);
-
     if (response.status === 404) {
-      return { key, value: null, found: false };
+      return { value: null, found: false };
     }
-
     if (!response.ok) {
       throw new Error(`Failed to get key: ${response.status}`);
     }
-
     const data = await response.json();
     return {
-      key,
       value: typeof data.value === "string" ? data.value : JSON.stringify(data.value),
-      found: true,
-      timestamp: new Date().toISOString(),
+      found: Boolean(data.found !== undefined ? data.found : true),
+      modified_at: data.modified_at || data.modifiedAt || undefined,
+      own_id: data.own_id || data.ownId || undefined,
     };
   } catch (error) {
-    return { key, value: null, found: false };
+    return { value: null, found: false };
   }
 }
 

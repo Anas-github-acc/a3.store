@@ -123,11 +123,13 @@ class KeyValueServicer(kv_pb2_grpc.KeyValueServicer):
         grpc_requests.labels("Get").inc()
         with grpc_latency.labels("Get").time():
             try:
-                val = self.storage.get(request.key)
-                log_read(self.own_addr, request.key, val is not None, val)
-                if val is None:
-                    return kv_pb2.GetResponse(value="", found=False)
-                return kv_pb2.GetResponse(value=val, found=True)
+                result = self.storage.get(request.key)
+                if result[0] is None:
+                    log_read(self.own_addr, request.key, False)
+                    return kv_pb2.GetResponse(value="", found=False, modified_at=0, own_id=self.own_addr)
+                val, modified_at = result
+                log_read(self.own_addr, request.key, True, val)
+                return kv_pb2.GetResponse(value=val, found=True, modified_at=modified_at, own_id=self.own_addr)
             except Exception:
                 grpc_errors.labels("Get").inc()
                 raise

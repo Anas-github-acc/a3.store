@@ -1,0 +1,626 @@
+{
+  "base": "http://10.103.254.21",
+  "fetched_at": 1766558611438,
+  "results": [
+    {
+      "method": "PUT",
+      "path": "/api/kv/test-key",
+      "url": "http://10.103.254.21/api/kv/test-key",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/kv/test-key",
+      "url": "http://10.103.254.21/api/kv/test-key",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/kv/test-key",
+      "url": "http://10.103.254.21/api/kv/test-key",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "value": "sample-value-post",
+          "found": true,
+          "modified_at": "1766558611117",
+          "own_id": "kv-0.kv-headless.kv.svc.cluster.local:50051"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/nodes",
+      "url": "http://10.103.254.21/api/cluster/nodes",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": [
+          {
+            "node_id": "node-kv-0",
+            "addr": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "heartbeat": 2452,
+            "status": "UP"
+          },
+          {
+            "node_id": "node-kv-2",
+            "addr": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "heartbeat": 2477,
+            "status": "UP"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/health",
+      "url": "http://10.103.254.21/api/cluster/health",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "status": "HEALTHY",
+          "nodes": 2,
+          "replication_factor": 2,
+          "timestamp": 1766558611146
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/pod-lifecycle",
+      "url": "http://10.103.254.21/api/cluster/pod-lifecycle",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": [
+          {
+            "pod": "kv-2",
+            "running": true,
+            "restarts": 0,
+            "phase": "Running"
+          },
+          {
+            "pod": "kv-1",
+            "running": true,
+            "restarts": 0,
+            "phase": "Running"
+          },
+          {
+            "pod": "kv-0",
+            "running": true,
+            "restarts": 0,
+            "phase": "Running"
+          },
+          {
+            "pod": "api-67d8dbbbbf-p28qh",
+            "running": true,
+            "restarts": 0,
+            "phase": "Running"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/metrics/summary",
+      "url": "http://10.103.254.21/api/metrics/summary",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "nodes_up": 3,
+          "nodes_total": 3,
+          "grpc_requests_total": 31,
+          "grpc_requests_by_method": {
+            "Get": 19,
+            "Put": 4,
+            "Replicate": 8
+          },
+          "grpc_errors_total": 0,
+          "grpc_errors_by_method": {},
+          "grpc_latency_avg": null,
+          "replication_attempts_total": 8,
+          "replication_failures_total": 0,
+          "anti_entropy_runs_total": 251,
+          "anti_entropy_repaired_total": 0
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/nodes/resources",
+      "url": "http://10.103.254.21/api/nodes/resources",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "cpu": [
+            {
+              "pod": "kv-2",
+              "value": 0.014251134269807614
+            },
+            {
+              "pod": "kv-1",
+              "value": 0.012984101386383855
+            },
+            {
+              "pod": "kv-0",
+              "value": 0.01371993350460936
+            },
+            {
+              "pod": "api-67d8dbbbbf-p28qh",
+              "value": 0.00002228419872583628
+            }
+          ],
+          "memory": [
+            {
+              "pod": "kv-2",
+              "value": 110665728
+            },
+            {
+              "pod": "kv-1",
+              "value": 116973568
+            },
+            {
+              "pod": "kv-0",
+              "value": 146178048
+            },
+            {
+              "pod": "api-67d8dbbbbf-p28qh",
+              "value": 81981440
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/anti-entropy/events",
+      "url": "http://10.103.254.21/api/anti-entropy/events",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": [
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558603861
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558573759
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558543657
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558513525
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558483388
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558453275
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558423167
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558393053
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558604301
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558574178
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558544053
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558513923
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558483788
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558453663
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558423538
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558393411
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558363290
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558603856
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558573754
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558543652
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558513519
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558483388
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558453274
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558423168
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_start",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 2,
+            "timestamp": 1766558393053
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558603968
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558573861
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558543759
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558513657
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558483525
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558453387
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558423274
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-2.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558393167
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558604415
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558574300
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558544177
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558514053
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558483923
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558453788
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558423663
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558393538
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-1.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558363411
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558603963
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558573856
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558543754
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558513652
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558483519
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558453387
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558423274
+          },
+          {
+            "component": "anti-entropy",
+            "event": "sync_complete",
+            "node": "kv-0.kv-headless.kv.svc.cluster.local:50051",
+            "chunk": -1,
+            "keys": 0,
+            "timestamp": 1766558393168
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "url": "http://10.103.254.21/healthz",
+      "result": {
+        "ok": true,
+        "status": 200,
+        "statusText": "OK",
+        "body": {
+          "status": "ok",
+          "a3store_version": "v1.0.0",
+          "timestamp": 1766558611436
+        }
+      }
+    }
+  ]
+}

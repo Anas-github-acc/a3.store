@@ -6,6 +6,10 @@ metadata:
 spec:
   serviceName: kv-headless
   replicas: 3
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
   selector:
     matchLabels:
       app: kv-node
@@ -16,7 +20,7 @@ spec:
     spec:
       containers:
         - name: kv-node
-          image: anasahamad/a3store-kv-node:v1
+          image: anasahamad/a3store-kv-node:v1.0.6
           ports:
             - containerPort: 50051
               name: grpc
@@ -24,6 +28,16 @@ spec:
               name: gossip
           
           env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
             - name: GRPC_PORT
               value: "50051"
 
@@ -39,7 +53,7 @@ spec:
               value: "/app/data"
 
             - name: OWN_ADDR
-              value: "$(NODE_ID).kv-headless.kv.svc.cluster.local:50051"
+              value: "$(POD_NAME).kv-headless.$(POD_NAMESPACE).svc.cluster.local:50051"
             
             # gRPC peers (all nodes)
             - name: PEERS
@@ -57,6 +71,10 @@ spec:
             
             - name: REPLICATION_FACTOR
               value: "2"
+
+            # Debug logging
+            - name: DEBUG_LOG
+              value: "true"
 
           readinessProbe:
             httpGet:

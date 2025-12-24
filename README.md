@@ -1,4 +1,4 @@
-# a3.redis — Distributed Key-Value Store
+# a3.redis - Distributed Key-Value Store
 
 <div align="center">
 
@@ -19,10 +19,49 @@
 
 ### Key Design Principles
 
-- **No Single Point of Failure** — Every node is equal; no master/slave hierarchy
-- **Eventual Consistency** — Writes are fast; replicas converge over time
-- **Partition Tolerant** — System remains available even when nodes fail
-- **Self-Healing** — Anti-entropy automatically repairs data inconsistencies
+- **No Single Point of Failure** - Every node is equal; no master/slave hierarchy
+- **Eventual Consistency** - Writes are fast; replicas converge over time
+- **Partition Tolerant** - System remains available even when nodes fail
+- **Self-Healing** - Anti-entropy automatically repairs data inconsistencies
+
+---
+
+
+## ☁️ AWS Deployment Architecture
+
+<div align="center">
+<img src="deployment-architecture.png" alt="AWS Deployment Architecture" style="max-width: 1200px; width: 100%;">
+</div>
+
+---
+
+### AWS Deployment Overview
+
+The AWS deployment architecture for **a3.redis** is designed for high availability, scalability, and fault tolerance, leveraging core AWS services to provide a robust production environment for distributed systems.
+
+#### **Key Components:**
+
+- **Amazon EC2 Auto Scaling Group:**
+  - Each node in the distributed key-value store runs as an EC2 instance within an Auto Scaling Group, ensuring automatic recovery and scaling based on demand or health checks.
+- **Elastic Load Balancer (ELB):**
+  - Distributes client and inter-node traffic across all healthy nodes, providing a single entry point and improving fault tolerance.
+- **Amazon VPC & Subnets:**
+  - Nodes are deployed in private subnets within a VPC for network isolation and security. Public subnets and NAT gateways enable secure outbound communication.
+- **Security Groups:**
+  - Strict security group rules control access to gRPC, HTTP, and management ports, allowing only trusted sources.
+- **Amazon RDS (Optional):**
+  - For advanced setups, RDS can be used for centralized logging, monitoring, or metadata storage, though the core database remains fully decentralized.
+- **CloudWatch & IAM:**
+  - CloudWatch monitors node health, logs, and metrics. IAM roles grant least-privilege access to AWS resources.
+
+#### **Deployment Flow:**
+
+1. **Clients** connect to the ELB, which routes requests to available EC2 nodes.
+2. **Nodes** communicate peer-to-peer within the VPC, using the gossip protocol for membership and health checks.
+3. **Auto Scaling** ensures the cluster adapts to load and recovers from failures automatically.
+4. **Monitoring** and **logging** are centralized in CloudWatch for observability and alerting.
+
+This architecture ensures that **a3.redis** can run reliably in production AWS environments, with seamless scaling, strong security, and operational visibility.
 
 ---
 
@@ -76,7 +115,7 @@ Keys are distributed across nodes using consistent hashing:
 
 ### 2️⃣ Gossip-Based Membership Protocol
 
-Fully decentralized peer discovery — no central registry needed.
+Fully decentralized peer discovery - no central registry needed.
 
 <div align="center">
 <img src="how_gossip_works.png" alt="Gossip Protocol" style="max-width: 800px; width: 100%;">

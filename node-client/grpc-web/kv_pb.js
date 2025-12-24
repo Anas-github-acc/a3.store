@@ -710,7 +710,9 @@ proto.kv.GetResponse.prototype.toObject = function(opt_includeInstance) {
 proto.kv.GetResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
 value: jspb.Message.getFieldWithDefault(msg, 1, ""),
-found: jspb.Message.getBooleanFieldWithDefault(msg, 2, false)
+found: jspb.Message.getBooleanFieldWithDefault(msg, 2, false),
+modifiedAt: jspb.Message.getFieldWithDefault(msg, 3, 0),
+ownId: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -755,6 +757,14 @@ proto.kv.GetResponse.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setFound(value);
       break;
+    case 3:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setModifiedAt(value);
+      break;
+    case 4:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setOwnId(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -798,6 +808,20 @@ proto.kv.GetResponse.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getModifiedAt();
+  if (f !== 0) {
+    writer.writeInt64(
+      3,
+      f
+    );
+  }
+  f = message.getOwnId();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
+      f
+    );
+  }
 };
 
 
@@ -834,6 +858,42 @@ proto.kv.GetResponse.prototype.getFound = function() {
  */
 proto.kv.GetResponse.prototype.setFound = function(value) {
   return jspb.Message.setProto3BooleanField(this, 2, value);
+};
+
+
+/**
+ * optional int64 modified_at = 3;
+ * @return {number}
+ */
+proto.kv.GetResponse.prototype.getModifiedAt = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.kv.GetResponse} returns this
+ */
+proto.kv.GetResponse.prototype.setModifiedAt = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional string own_id = 4;
+ * @return {string}
+ */
+proto.kv.GetResponse.prototype.getOwnId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.kv.GetResponse} returns this
+ */
+proto.kv.GetResponse.prototype.setOwnId = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 

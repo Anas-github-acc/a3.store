@@ -1,12 +1,14 @@
-# anti_entropy.py
+import logging
 import os
 import hashlib
 import time
 import threading
 import json
+import sys
 from grpc_client import get_chunk_hash, fetch_range
 
 from metrics import anti_entropy_runs, anti_entropy_repairs
+
 
 CHUNK_COUNT = 16         # number of partitions (should match storage & hashing)
 SYNC_INTERVAL = 30       # seconds between full anti-entropy passes
@@ -16,7 +18,6 @@ RANGE_TIMEOUT = 10       # timeout for FetchRange RPC
 # Logging switch - set DEBUG_LOG=true to enable detailed logging
 DEBUG_LOG = os.environ.get("DEBUG_LOG", "false").lower() == "true"
 
-# ANSI colors for logging
 class Colors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
@@ -26,15 +27,29 @@ class Colors:
     RED = '\033[91m'
     RESET = '\033[0m'
 
-def log_ae_event(event_type, node, chunk, keys=0):
-    print(json.dumps({
+
+logging.getLogger().handlers.clear()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True
+)
+
+
+def log_ae_event(event_type, node, chunk, keys=0, extra=None):
+    payload = {
         "component": "anti-entropy",
         "event": event_type,
         "node": node,
         "chunk": chunk,
         "keys": keys,
         "timestamp": int(time.time() * 1000)
-    }))
+    }
+    if extra and isinstance(extra, dict):
+        payload.update(extra)
+
+    logging.info(json.dumps(payload))
 
 def log_ae(msg, color=Colors.MAGENTA):
     if DEBUG_LOG:
@@ -73,6 +88,7 @@ def repair_chunk_from_peer(storage, peer_addr, chunk_id):
     """
     try:
         log_ae(f"Fetching chunk {chunk_id} data from {peer_addr}...", Colors.CYAN)
+        log_ae_event("repair_start", peer_addr, chunk_id, keys=0)
         stream = fetch_range(peer_addr, chunk_id, timeout=RANGE_TIMEOUT)
         repaired_count = 0
         for kv in stream:
@@ -91,6 +107,7 @@ def repair_chunk_from_peer(storage, peer_addr, chunk_id):
         
         if repaired_count > 0:
             log_ae(f"Repaired {repaired_count} keys from chunk {chunk_id} via {peer_addr}", Colors.GREEN)
+            log_ae_event("repair_complete", peer_addr, chunk_id, keys=repaired_count)
         anti_entropy_repairs.inc() # -- prometheus metric
 
     except Exception as e:
@@ -113,14 +130,27 @@ def process_single_peer(storage, peer_addr):
             # mismatch => repair this chunk
             if peer_hash != local_hash:
                 log_ae(f"MISMATCH @ chunk {chunk_id} vs {peer_addr} (local={local_hash[:8].hex()}... peer={peer_hash[:8].hex()}...) → repairing...", Colors.YELLOW)
+                log_ae_event(
+                    "chunk_mismatch",
+                    peer_addr,
+                    chunk_id,
+                    keys=0,
+                    extra={
+                        "local_hash": local_hash.hex(),
+                        "peer_hash": peer_hash.hex(),
+                        "local_hash_short": local_hash[:8].hex(),
+                        "peer_hash_short": peer_hash[:8].hex(),
+                        "peer": peer_addr,
+                    },
+                )
                 repair_chunk_from_peer(storage, peer_addr, chunk_id)
 
         except Exception as e:
             log_ae(f"Error comparing chunk {chunk_id} with {peer_addr}: {e}", Colors.RED)
+            log_ae_event("compare_error", peer_addr, chunk_id, keys=0)
 
 
-def anti_entropy_loop(storage, get_peer_list, interval=SYNC_INTERVAL):
-    anti_entropy_runs.inc() # -- prometheus metric
+def anti_entropy_loop(storage, get_peer_list, own_id=None, own_addr=None, interval=SYNC_INTERVAL):
     """
     Background loop:
     - get_peer_list(): must return list of peer addresses like "127.0.0.1:50051"
@@ -129,29 +159,36 @@ def anti_entropy_loop(storage, get_peer_list, interval=SYNC_INTERVAL):
     Runs forever in a thread.
     """
     while True:
+        anti_entropy_runs.inc() # -- prometheus metric
         peers = get_peer_list()
         if not peers:
             log_ae("No peers available, skipping sync round", Colors.YELLOW)
+            if own_addr:
+                log_ae_event("no_peers", own_addr, -1, keys=0)
             time.sleep(interval)
             continue
 
         log_ae(f"Starting sync round with peers: {peers}", Colors.BLUE)
+        if own_addr:
+            log_ae_event("sync_start", own_addr, -1, keys=len(peers))
 
         for peer in peers:
             process_single_peer(storage, peer)
 
         log_ae(f"Sync round complete. Next sync in {interval}s", Colors.BLUE)
+        if own_addr:
+            log_ae_event("sync_complete", own_addr, -1, keys=0)
         time.sleep(interval)
 
 
-def start_anti_entropy(storage, get_peer_list):
+def start_anti_entropy(storage, get_peer_list, own_id=None, own_addr=None):
     """
     Spawns the background thread.
     Use in main node startup.
     """
     t = threading.Thread(
         target=anti_entropy_loop,
-        args=(storage, get_peer_list),
+        args=(storage, get_peer_list, own_id, own_addr),
         daemon=True
     )
     t.start()

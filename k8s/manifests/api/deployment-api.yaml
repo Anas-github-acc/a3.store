@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: anasahamad/a3store-api:v1
+          image: anasahamad/a3store-api:v1.0.12
           ports:
             - containerPort: 8080
           env:

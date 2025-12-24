@@ -12,6 +12,12 @@ app = FastAPI()
 
 membership = {}
 
+def ensure_self_in_membership(own_id: str, own_addr: str, hb: int = 0):
+    """
+    Ensure the local node is present in the membership map.
+    """
+    membership[own_id] = {"addr": own_addr, "hb": hb}
+
 # Logging switch - set DEBUG_LOG=true to enable detailed logging
 DEBUG_LOG = os.environ.get("DEBUG_LOG", "false").lower() == "true"
 
@@ -83,6 +89,8 @@ def receive_gossip(payload: GossipPayload):
 
 
 def start_gossip_loop(own_id: str, own_addr: str, peers: list[str], interval: float = 1.0):
+    # Ensure own node is always present in membership at startup
+    ensure_self_in_membership(own_id, own_addr, 0)
     """
     Starts a background thread that sends heartbeat gossip to peers.
     This should be called once when the node starts.
@@ -91,7 +99,9 @@ def start_gossip_loop(own_id: str, own_addr: str, peers: list[str], interval: fl
         hb = 0
         while True:
             hb += 1
-            payload = {"node_id": own_id, "addr": own_addr, "heartbeat": hb,}
+            # Always update own membership entry
+            ensure_self_in_membership(own_id, own_addr, hb)
+            payload = {"node_id": own_id, "addr": own_addr, "heartbeat": hb}
 
             for peer in peers:
                 try:

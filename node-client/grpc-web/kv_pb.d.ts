@@ -75,6 +75,12 @@ export class GetResponse extends jspb.Message {
   getFound(): boolean;
   setFound(value: boolean): GetResponse;
 
+  getModifiedAt(): number;
+  setModifiedAt(value: number): GetResponse;
+
+  getOwnId(): string;
+  setOwnId(value: string): GetResponse;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): GetResponse.AsObject;
   static toObject(includeInstance: boolean, msg: GetResponse): GetResponse.AsObject;
@@ -87,6 +93,8 @@ export namespace GetResponse {
   export type AsObject = {
     value: string,
     found: boolean,
+    modifiedAt: number,
+    ownId: string,
   }
 }
 

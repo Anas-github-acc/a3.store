@@ -6,6 +6,8 @@ import { ArchitectureDiagram } from "@/components/landing/ArchitectureDiagram";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 import { TechStack } from "@/components/landing/TechStack";
 import { HeroGradient } from "@/components/landing/HeroGradient";
+import { InfoTabs } from "@/components/landing/InfoTabs";
+// import Image from "next/image";
 
 const features = [
   {
@@ -51,10 +53,11 @@ export default function Landing() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
+            {/* <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
               <Database className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight">a3.redis</span>
+            </div> */}
+            <img src="/a3store-icon.svg" alt="a3.redis Logo" className="w-[1.8rem] h-auto" height={70} width={70} />
+            <span className="font-normal text-lg tracking-tight">a3.redis</span>
           </motion.div>
           
           <motion.div 
@@ -63,7 +66,7 @@ export default function Landing() {
             className="flex items-center gap-4"
           >
             <a 
-              href="https://github.com" 
+              href="https://github.com/Anas-github-acc/a3.store.git" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -84,7 +87,7 @@ export default function Landing() {
         <HeroGradient />
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 lg:py-32">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-[7rem] items-center">
             <div className="space-y-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -101,7 +104,7 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1]"
+                className="text-5xl lg:text-7xl font-medium tracking-tight leading-[1.1]"
               >
                 Decentralized
                 <br />
@@ -130,7 +133,7 @@ export default function Landing() {
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </GlowButton>
                 </Link>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/Anas-github-acc/a3.store.git" target="_blank" rel="noopener noreferrer">
                   <GlowButton size="lg" variant="outline" className="gap-2">
                     <Github className="w-4 h-4" />
                     View on GitHub
@@ -270,6 +273,25 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Info Tabs Section */}
+      <section className="relative py-32 border-t border-border/30">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <span className="text-primary font-medium text-sm tracking-wider uppercase">Learn More</span>
+            <h2 className="text-4xl lg:text-5xl font-bold mt-4 mb-6">
+              Explore the <span className="gradient-text">Project & Developer</span>
+            </h2>
+          </motion.div>
+          
+          <InfoTabs />
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="relative py-32 border-t border-border/30">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
@@ -280,7 +302,7 @@ export default function Landing() {
             viewport={{ once: true }}
             className="space-y-8"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold">
+            <h2 className="text-4xl lg:text-5xl font-semibold">
               Ready to explore the <span className="gradient-text">distributed system</span>?
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -293,7 +315,7 @@ export default function Landing() {
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </GlowButton>
               </Link>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/Anas-github-acc/a3.store.git" target="_blank" rel="noopener noreferrer">
                 <GlowButton size="xl" variant="outline" className="gap-2">
                   <Github className="w-5 h-5" />
                   Star on GitHub
@@ -309,16 +331,16 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
-                <Database className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-semibold">a3.redis</span>
+              {/* <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-glow-secondary flex items-center justify-center">
+              </div> */}
+              <img src="/a3store-text-icon.svg" alt="a3.redis Logo" className="absolute w-[7rem] h-auto" height={70} width={70} />
+              {/* <span className="font-semibold">a3.redis</span> */}
             </div>
             <p className="text-sm text-muted-foreground">
-              Built with Python, gRPC, and Kubernetes. Open source.
+            &nbsp; Crafted by <span className="font-semibold text-foreground">Anas</span>, and open for contributor.
             </p>
             <a 
-              href="https://github.com" 
+              href="https://github.com/Anas-github-acc/a3.store.git" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"

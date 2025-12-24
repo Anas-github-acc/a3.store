@@ -24,29 +24,32 @@ echo "[-] Copied proto folder to api, kv-node, and node-client..."
 
 
 
+# ----------------------------------------------------------------------------------
 cd "$ROOT_DIR/node-client" || exit 1
 
 npm install
-
 if [ ! -d "node_modules/grpc-web" ]; then
   echo "grpc-web package not found. Installing"
   npm install --save grpc-web
 fi
-
 if ! command -v protoc-gen-grpc-web >/dev/null 2>&1 && [ ! -x "node_modules/.bin/protoc-gen-grpc-web" ]; then
   echo "protoc-gen-grpc-web plugin not found. Installing as devDependency..."
   npm install --save-dev protoc-gen-grpc-web
 fi
-
 npm run gen:proto
 echo "[-]Generated gRPC-Web stubs for node-client"
 
 
-cd "$ROOT_DIR/"
+
+# ----------------------------------------------------------------------------------
+cd "$ROOT_DIR/kv-node"
+if [ ! -d ".venv" ]; then
+  uv venv .venv
+fi
 source .venv/bin/activate
-uv sync
+uv sync --active
 python -m grpc_tools.protoc -I=./proto \
   --python_out=app/ --grpc_python_out=app/ \
   ./proto/kv.proto
 
-echo "[-] Generated gRPC stubs for python dist-server"
+echo "[-] Generated gRPC stubs for python kv-node"

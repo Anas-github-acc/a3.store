@@ -12,11 +12,11 @@ service KeyValue {
 message PutRequest {
   string key = 1;
   string value = 2;
-  int64 modified_at = 3;  // timestamp for conflict resolution
+  int64 modified_at = 3;
 }
 message PutResponse { bool ok = 1; string message = 2; }
 message GetRequest { string key = 1; }
-message GetResponse { string value = 1; bool found = 2; }
+message GetResponse { string value = 1; bool found = 2; int64 modified_at = 3; string own_id = 4; }
 message KeyValuePair { string key = 1; string value = 2; int64 modified_at = 3; }
 message ChunkRequest { int32 chunk_id = 1; }
 message ChunkHashResponse { bytes hash = 1; }

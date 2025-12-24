@@ -24,7 +24,7 @@ function put(address, key, value, cb) {
   const request = {
     key,
     value,
-    modified_at: Date.now().toString()
+    modified_at: Date.now()
   };
   client.Put(request, (err, resp) => {
     if (err) return cb(err, null);
