@@ -66,8 +66,6 @@ High-level diagrams live in `images/` (referenced below):
 - Gossip thread: lightweight HTTP endpoint for heartbeat/post
 - Background loops: gossip (1s) and anti-entropy (30s)
 
-Refer to [ARCHITECTURE.md](ARCHITECTURE.md) for an expanded ASCII diagram and queue/coordination notes.
-
 ---
 
 ## Diagrams & explanations

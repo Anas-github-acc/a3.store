@@ -315,26 +315,3 @@ dist-redis/
 | **Eventual Consistency** | sync replication to guarantee store |
 | **Anti-Entropy** | chunk hash key method for anti-entropy |
 | **Self-Healing** | Automatic data repair after failures |
-
----
-
-## 📚 References & Inspiration
-
-- [Amazon Dynamo Paper](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)
-- [Apache Cassandra Architecture](https://cassandra.apache.org/doc/latest/architecture/)
-- [Riak KV](https://riak.com/products/riak-kv/)
-- [HashiCorp Serf (Gossip)](https://www.serf.io/)
-
----
-
-## 📄 License
-
-MIT License - feel free to use this for learning and building!
-
----
-
-<div align="center">
-
-**Built with ❤️ to learn distributed systems**
-
-</div>
