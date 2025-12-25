@@ -1,4 +1,5 @@
-# a3.redis - Distributed Key-Value Store
+
+# <img src="a3store-icon.svg" alt="a3store icon" width="32" height="32" style="vertical-align: middle; margin-right: 8px;" /> a3.store - Distributed Key-Value Store
 
 <div align="center">
 

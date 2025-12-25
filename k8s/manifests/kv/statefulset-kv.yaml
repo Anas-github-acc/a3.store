@@ -89,6 +89,7 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
 
+  #  most possible since we have not defined any StorageClass it will chose AWS EBS gp2 as default
   volumeClaimTemplates:
     - metadata:
         name: data
