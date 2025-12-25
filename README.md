@@ -1,444 +1,191 @@
 
-# <img src="a3store-icon.svg" alt="a3store icon" width="32" height="32" style="vertical-align: middle; margin-right: 8px;" /> a3.store - Distributed Key-Value Store
 
-<div align="center">
+# <div style="{display: 'flex', alignItems: 'center'}"><img src="a3store-icon.svg" alt="a3store icon" width="32" height="32" style="vertical-align: middle; margin-right: 8px;" /> a3.store - Distributed Key-Value Store</div>
 
-**A Dynamo-style distributed key-value database with no central coordinator**
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![gRPC](https://img.shields.io/badge/gRPC-Protocol-green.svg)](https://grpc.io)
-[![Node.js](https://img.shields.io/badge/Node.js-Client-yellow.svg)](https://nodejs.org)
-[![SQLite](https://img.shields.io/badge/SQLite-WAL-lightgrey.svg)](https://sqlite.org)
-
-</div>
+a3.store is a distributed key-value database you can run locally. It is inspired by DynamoDB and Cassandra, but is simple to set up and 3 min to get started.
 
 ---
 
-## 🎯 Overview
+## Quick Start (3 minutes)
 
-**a3.redis** is a fully decentralized, peer-to-peer distributed key-value store implementing real distributed systems concepts used in production databases like **Amazon DynamoDB**, **Apache Cassandra**, and **Riak**.
-
-### Key Design Principles
-
-- **No Single Point of Failure** - Every node is equal; no master/slave hierarchy
-- **Eventual Consistency** - Writes are fast; replicas converge over time
-- **Partition Tolerant** - System remains available even when nodes fail
-- **Self-Healing** - Anti-entropy automatically repairs data inconsistencies
-
----
-
-
-## ☁️ AWS Deployment Architecture
-
-<div align="center">
-<img src="deployment-architecture.png" alt="AWS Deployment Architecture" style="max-width: 1200px; width: 100%;">
-</div>
-
----
-
-### AWS Deployment Overview
-
-The AWS deployment architecture for **a3.redis** is designed for high availability, scalability, and fault tolerance, leveraging core AWS services to provide a robust production environment for distributed systems.
-
-#### **Key Components:**
-
-- **Amazon EC2 Auto Scaling Group:**
-  - Each node in the distributed key-value store runs as an EC2 instance within an Auto Scaling Group, ensuring automatic recovery and scaling based on demand or health checks.
-- **Elastic Load Balancer (ELB):**
-  - Distributes client and inter-node traffic across all healthy nodes, providing a single entry point and improving fault tolerance.
-- **Amazon VPC & Subnets:**
-  - Nodes are deployed in private subnets within a VPC for network isolation and security. Public subnets and NAT gateways enable secure outbound communication.
-- **Security Groups:**
-  - Strict security group rules control access to gRPC, HTTP, and management ports, allowing only trusted sources.
-- **Amazon RDS (Optional):**
-  - For advanced setups, RDS can be used for centralized logging, monitoring, or metadata storage, though the core database remains fully decentralized.
-- **CloudWatch & IAM:**
-  - CloudWatch monitors node health, logs, and metrics. IAM roles grant least-privilege access to AWS resources.
-
-#### **Deployment Flow:**
-
-1. **Clients** connect to the ELB, which routes requests to available EC2 nodes.
-2. **Nodes** communicate peer-to-peer within the VPC, using the gossip protocol for membership and health checks.
-3. **Auto Scaling** ensures the cluster adapts to load and recovers from failures automatically.
-4. **Monitoring** and **logging** are centralized in CloudWatch for observability and alerting.
-
-This architecture ensures that **a3.redis** can run reliably in production AWS environments, with seamless scaling, strong security, and operational visibility.
-
----
-
-## 🏗️ Architecture
-
-<div align="center">
-<img src="distributed_database_architecure.png" alt="System Architecture" style="max-width: 1200px; width: 100%;">
-</div>
-
----
-
-## 🔧 Technology Stack
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Server Runtime** | Python 3.10+ | Node engine & business logic |
-| **RPC Framework** | gRPC + Protobuf | Client API & inter-node replication |
-| **HTTP Server** | FastAPI + Uvicorn | Gossip protocol endpoints |
-| **Storage Engine** | SQLite (WAL mode) | Durable local persistence |
-| **Client** | Node.js | gRPC client for testing |
-
----
-
-## 📦 Core Distributed Systems Features
-
-### 1️⃣ Consistent Hashing Ring
-
-Keys are distributed across nodes using consistent hashing:
-
-```
-                    Hash Ring (0 to 2^32)
-                         ┌──────┐
-                      ╱──│Node 1│──╲
-                    ╱    └──────┘    ╲
-               ┌──────┐            ┌──────┐
-               │Node 3│            │Node 2│
-               └──────┘            └──────┘
-                    ╲              ╱
-                      ╲──────────╱
-
-    hash("user:123") = 0x4A2B... → Routes to Node 2
-    hash("order:456") = 0xE1F3... → Routes to Node 1
-```
-
-**Benefits:**
-- Adding/removing nodes only redistributes ~1/N keys
-- Load is balanced across all nodes
-- Replication factor determines data redundancy
-
----
-
-### 2️⃣ Gossip-Based Membership Protocol
-
-Fully decentralized peer discovery - no central registry needed.
-
-<div align="center">
-<img src="how_gossip_works.png" alt="Gossip Protocol" style="max-width: 800px; width: 100%;">
-</div>
-
-**How it works:**
-- Each node sends heartbeats to known peers every 1 second
-- Heartbeat contains: `node_id`, `address`, `heartbeat_counter`
-- Nodes merge received heartbeats (higher counter wins)
-- Result: Eventually consistent cluster membership
-
----
-
-### 3️⃣ Asynchronous Replication
-
-When a client writes data:
-
-<div align="center">
-<img src="sequential_diagram.png" alt="Asynchronous Replication" style="max-width: 700px; width: 100%;">
-</div>
-
-**Characteristics:**
-- Client gets fast response (single node write)
-- Replication happens in background threads
-- System remains available if replicas are temporarily down
-- Failed replications are recovered via anti-entropy
-
----
-
-### 4️⃣ Anti-Entropy Repair (Self-Healing)
-
-Background process that synchronizes data between nodes:
-
-<div align="center">
-<img src="anti-entropy_chunking_works.png" alt="Anti-Entropy Repair" style="max-width: 1200px; width: 100%;">
-</div>
-
-**This repairs:**
-- Missed replications (network partitions)
-- Data from nodes that were temporarily down
-- Divergent data using Last-Write-Wins (LWW)
-
----
-
-### 5️⃣ Thread Architecture & Queue-Based Coordination
-
-Each node runs multiple concurrent subsystems:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Node Process                                │
-│                                                                     │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐  │
-│  │   Main Thread   │  │  gRPC Thread    │  │  Gossip HTTP Thread │  │
-│  │                 │  │     Pool        │  │    (Uvicorn)        │  │
-│  │  Orchestrates   │  │                 │  │                     │  │
-│  │  startup &      │  │  Handles:       │  │  Handles:           │  │
-│  │  shutdown       │  │  - Put/Get      │  │  - POST /gossip     │  │
-│  │                 │  │  - Replicate    │  │                     │  │
-│  └─────────────────┘  │  - GetChunkHash │  └─────────────────────┘  │
-│                       │  - FetchRange   │                           │
-│  ┌─────────────────┐  └─────────────────┘  ┌─────────────────────┐  │
-│  │  Gossip Loop    │                       │  Anti-Entropy Loop  │  │
-│  │    Thread       │                       │      Thread         │  │
-│  │                 │                       │                     │  │
-│  │  Every 1s:      │                       │  Every 30s:         │  │
-│  │  Send heartbeat │                       │  Compare & repair   │  │
-│  │  to all peers   │                       │  data with peers    │  │
-│  └─────────────────┘                       └─────────────────────┘  │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                  SQLite Storage (Thread-Local Connections)  │    │
-│  │                       WAL Mode for Concurrent Access        │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**⚠️ Critical Sections & Future Queue Integration:**
-
-For high-throughput production use, the following areas would benefit from task queues:
-
-| Area | Current | Future Enhancement |
-|------|---------|-------------------|
-| Replication | Fire-and-forget threads | Redis/RabbitMQ queue with retry |
-| Anti-entropy repairs | Direct writes | Batched write queue |
-| Failed replications | Logged & dropped | Hinted handoff queue |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+ (for client)
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
-
-### 1. Clone the Repository
+1. Clone and enter the node folder:
 
 ```bash
-git clone https://github.com/yourusername/dist-redis.git
-cd dist-redis
+git clone https://github.com/anasrar/dist-redis.git
+cd dist-redis/kv-node
 ```
 
-### 2. Setup Python Server
+2. Create and activate a Python venv, then install dependencies:
 
 ```bash
-cd dist-server
-
-# Using uv (recommended)
-uv venv .venv
-source .venv/bin/activate
-uv sync
-
-# Or using pip
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Start a 3-Node Cluster
-
-Open **3 separate terminals**:
-
-**Terminal 1:**
-```bash
-cd dist-server
-source .venv/bin/activate
-./run-server.sh
-# Enter: Node number: 1, Total nodes: 3, Replication factor: 2
-```
-
-**Terminal 2:**
-```bash
-cd dist-server
-source .venv/bin/activate
-./run-server.sh
-# Enter: Node number: 2, Total nodes: 3, Replication factor: 2
-```
-
-**Terminal 3:**
-```bash
-cd dist-server
-source .venv/bin/activate
-./run-server.sh
-# Enter: Node number: 3, Total nodes: 3, Replication factor: 2
-```
-
-### 4. Setup Node.js Client
+3. Start a 3-node dev cluster (RF=2):
 
 ```bash
-cd nodejs-client
-npm install
+cd .. && ./scripts/docker.sh
+# or run interactive nodes:
+./kvrun.sh   # answer prompts: node, total nodes (3), replication factor (2)
 ```
 
-### 5. Test the Cluster
+4. Test with the provided HTTP client:
 
 ```bash
-# Run the distributed test
-node app/test-distributed.js
-```
-
-**Expected Output:**
-```
-========================================
-   Distributed Database Test Suite
-========================================
-
-TEST 1: Write to Node 1
-  ✅ PUT response: {"ok":true,"message":"stored"}
-
-TEST 2: Read from ALL nodes (verify replication)
-  ✅ Node 1: Found correct value
-  ✅ Node 2: Found correct value
-  ✅ Node 3: Found correct value
-
-========================================
-✅ Distributed database is working correctly!
+python3 app/http-server/client.py
 ```
 
 ---
 
-## 🔌 API Reference
+## What this project implements (short)
 
-### gRPC Service Definition
+- Simple distributed KV store inspired by Dynamo/Riak/Cassandra
+- gRPC for client & inter-node RPCs
+- Gossip for peer discovery
+- Anti-entropy using keyspace chunk hashing (16 chunks)
+- SQLite backend (WAL) per node, configurable replication factor
+
+---
+
+## Architecture & Design (visual)
+
+
+High-level diagrams live in `images/` (referenced below):
+
+- `images/distributed_database_architecure.png` — overall topology
+- `images/how_gossip_works.png` — gossip membership flow
+- `images/anti-entropy_chunking_works.png` — chunk hashing and repair
+- `images/deployment-architecture.png` — deployment architecture (EKS)
+
+### Thread model (concise)
+
+- Main thread: process lifecycle
+- gRPC thread pool: handles `Put`, `Get`, `Replicate`, `FetchRange`
+- Gossip thread: lightweight HTTP endpoint for heartbeat/post
+- Background loops: gossip (1s) and anti-entropy (30s)
+
+Refer to [ARCHITECTURE.md](ARCHITECTURE.md) for an expanded ASCII diagram and queue/coordination notes.
+
+---
+
+## Diagrams & explanations
+
+### Distributed Database Architecture
+
+![Distributed Database Architecture](images/distributed_database_architecure.png)
+
+This diagram shows the cluster topology and request flow: clients send `Put`/`Get` to any node; writes are synchronously forwarded to the configured number of replicas (replication factor). Each node runs a local SQLite store (WAL) and exposes gRPC for client and inter-node RPCs. The architecture highlights separation of client-facing traffic, replication paths, and background subsystems (gossip + anti-entropy).
+
+### How Gossip Works
+
+![How Gossip Works](images/how_gossip_works.png)
+
+Gossip is the decentralized membership protocol: each node periodically selects peers and sends lightweight heartbeats. Membership updates spread probabilistically (epidemic style); failed nodes are detected via missed heartbeats and membership state converges without a central coordinator.
+
+### Anti-Entropy Chunking
+
+![Anti-Entropy Chunking](images/anti-entropy_chunking_works.png)
+
+To efficiently repair divergence, the keyspace is split into 16 chunks. Nodes compute a compact hash per chunk and exchange hashes with peers. Only chunks with mismatched hashes are scanned and synchronized by fetching the key ranges, dramatically reducing bandwidth and repair time compared to full key comparisons.
+
+### Deployment Architecture (AWS EKS)
+
+![Deployment Architecture (EKS)](images/deployment-architecture.png)
+
+This diagram illustrates a recommended deployment pattern for running `a3.store` on AWS EKS:
+
+- Each KV node runs in its own Kubernetes Pod, with a dedicated PersistentVolumeClaim for SQLite data to ensure durability.
+- gRPC ports are exposed via an internal Service (ClusterIP); a LoadBalancer (or ingress) may be used for external client traffic.
+- A sidecar or init container can be used to provision node-level configuration (NODE_NUM, DATA_DIR) from ConfigMaps and Secrets.
+- Anti-entropy and gossip traffic are internal, kept on the cluster network; cross-AZ affinity or pod anti-affinity should be configured for resilience.
+- For production, pair EKS with managed backing services (EFS/FSx for shared storage if needed, or object storage for backups; and SQS/Redis for queued replication/repair if implementing the future roadmap).
+
+Security & resilience notes:
+
+- Use NetworkPolicies to limit traffic to gRPC and gossip ports between pods.
+- Configure PodDisruptionBudgets and readiness/liveness probes so replicas remain available during rolling updates.
+- Consider running Prometheus metrics scraping and a Grafana dashboard for observability.
+
+
+## Quick API Reference
+
+Core gRPC service (see `proto/kv.proto`):
 
 ```protobuf
 service KeyValue {
-  // Client-facing RPCs
+  // client
   rpc Put(PutRequest) returns (PutResponse);
   rpc Get(GetRequest) returns (GetResponse);
-  
-  // Internal node-to-node RPCs
+
+  // internal
   rpc Replicate(PutRequest) returns (PutResponse);
   rpc GetChunkHash(ChunkRequest) returns (ChunkHashResponse);
   rpc FetchRange(RangeRequest) returns (stream KeyValuePair);
 }
 ```
 
-### Node.js Client Usage
+Node.js client usage (examples in `nodejs-client/`):
 
-```javascript
+```js
 const client = require('./grpc_client.js');
-
-// Write a key
-client.put('127.0.0.1:50051', 'user:123', 'John Doe', (err, res) => {
-  console.log('PUT:', res);  // { ok: true, message: 'stored' }
-});
-
-// Read a key
-client.get('127.0.0.1:50051', 'user:123', (err, res) => {
-  console.log('GET:', res);  // { value: 'John Doe', found: true }
-});
+client.put('127.0.0.1:50051', 'user:101', 'Alice', (err,res)=>console.log(res));
+client.get('127.0.0.1:50051', 'user:101', (err,res)=>console.log(res));
 ```
 
 ---
 
-## 🐛 Debug Logging
+## Configuration (env vars)
 
-Enable detailed logging to see replication, gossip, and anti-entropy in action:
+| Variable | Default | Purpose |
+|---|---:|---|
+| NODE_NUM | `1` | Node id (unique per process) |
+| GRPC_PORT | `50051` | gRPC server port |
+| GOSSIP_PORT | `8001` | Gossip HTTP port |
+| REPLICATION_FACTOR | `2` | Number of replicas |
+| DATA_DIR | `data/node{N}` | SQLite DB dir |
+
+---
+
+## Debugging & Observability
+
+- Run with verbose logs:
 
 ```bash
-DEBUG_LOG=true ./run-server.sh
+DEBUG_LOG=true ./kvrun.sh
 ```
 
-**Log Output Example:**
-```
-[WRITE] Node=127.0.0.1:50051 | Key=name | Value=anas | Timestamp=1733356800
-[REPLICAS] Key=name will replicate to: ['127.0.0.1:50052', '127.0.0.1:50053']
-[REPLICATE→] 127.0.0.1:50051 → 127.0.0.1:50052 | Key=name
-[REPLICATE✓] Successfully replicated key=name to 127.0.0.1:50052
-[GOSSIP] New node discovered: node-2 @ 127.0.0.1:50052
-[ANTI-ENTROPY] Starting sync round with peers: ['127.0.0.1:50052']
-```
+- Key log tags to scan:
+  - `[REPLICATE]` — replication attempts/results
+  - `[GOSSIP]` — membership events
+  - `[ANTI-ENTROPY]` — repair rounds and chunk mismatches
 
 ---
 
-## 📁 Project Structure
+## Troubleshooting checklist
 
-```
-dist-redis/
-├── README.md                 # This file
-├── image.png                 # Architecture diagram
-├── proto/
-│   └── kv.proto              # gRPC service definition
-├── scripts/
-│   └── generate-stubs.sh     # Regenerate gRPC stubs
-├── dist-server/              # Python server
-│   ├── app/
-│   │   ├── node.py           # Main entry point
-│   │   ├── grpc_server.py    # gRPC service implementation
-│   │   ├── grpc_client.py    # Internal gRPC client
-│   │   ├── gossip.py         # Gossip membership protocol
-│   │   ├── anti_entropy.py   # Background repair loop
-│   │   ├── storage.py        # SQLite storage engine
-│   │   ├── kv_pb2.py         # Generated protobuf
-│   │   └── kv_pb2_grpc.py    # Generated gRPC stubs
-│   ├── run-server.sh         # Node launcher script
-│   ├── pyproject.toml        # Python dependencies
-│   └── data/                 # SQLite databases per node
-└── nodejs-client/            # Node.js client
-    ├── grpc_client.js        # gRPC client library
-    ├── app/
-    │   ├── app.js            # Simple test
-    │   └── test-distributed.js # Full cluster test
-    └── package.json
-```
+- Ensure ports `50051-50053` and `8001-8003` are free
+- Each node must have its own `DATA_DIR`
+- If diagrams don’t render, place the PNG files under `images/`
 
 ---
 
-## ⚙️ Configuration
+## Project layout (short)
 
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NODE_NUM` | `1` | Node identifier (1, 2, 3, ...) |
-| `GRPC_PORT` | `50051` | gRPC server port |
-| `GOSSIP_PORT` | `8001` | Gossip HTTP port |
-| `REPLICATION_FACTOR` | `2` | Number of replicas per key |
-| `DEBUG_LOG` | `false` | Enable verbose logging |
-| `DATA_DIR` | `data/node{N}` | SQLite database directory |
-
-### Cluster Sizing Guide
-
-| Nodes | Replication Factor | Fault Tolerance | Use Case |
-|-------|-------------------|-----------------|----------|
-| 1 | 1 | 0 failures | Development |
-| 3 | 2 | 1 failure | Testing |
-| 3 | 3 | 2 failures | Production (minimal) |
-| 5 | 3 | 2 failures | Production (recommended) |
+- `kv-node/` — Python node code (server, gossip, anti-entropy, storage)
+- `proto/` — `kv.proto` definition
+- `nodejs-client/` — JS client + tests
+- `scripts/` — helpers (docker.sh, kvrun.sh)
+- `infra/`, `k8s/`, `terraform/` — deployment manifests
 
 ---
 
-## 🎓 Distributed Systems Concepts Implemented
+## Next steps I can take for you
 
-| Concept | Implementation |
-|---------|----------------|
-| **Gossip Protocol** | Decentralized membership via heartbeats |
-| **Eventual Consistency** | sync replication to guarantee store |
-| **Anti-Entropy** | chunk hash key method for anti-entropy |
-| **Self-Healing** | Automatic data repair after failures |
+- Copy your three images into `images/` and update paths (if you tell me their current locations)
+- Commit this README and open a PR
+- Further tighten wording or produce a short QuickStart video script
 
----
+Tell me which of the next steps you want me to perform. I can now commit the README or place the images if you point me to them.
 
-## 📚 References & Inspiration
-
-- [Amazon Dynamo Paper](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)
-- [Apache Cassandra Architecture](https://cassandra.apache.org/doc/latest/architecture/)
-- [Riak KV](https://riak.com/products/riak-kv/)
-- [HashiCorp Serf (Gossip)](https://www.serf.io/)
-
----
-
-## 📄 License
-
-MIT License - feel free to use this for learning and building!
-
----
-
-<div align="center">
-
-**Built with ❤️ to learn distributed systems**
-
-</div>

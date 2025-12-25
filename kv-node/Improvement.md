@@ -26,6 +26,7 @@ Client Ack: Once the Quorum (W) is met, the Coordinator returns "Success" to the
 Owner Identification: The client sends a GET to Node H (Coordinator). Node H checks the hash ring and realizes it does not own the data, but Nodes A, B, and C do.
 
 Quorum Fetch: Node H acts as a proxy and requests the data from R nodes (e.g., if R=2, it asks A and B). It typically asks one for the full data and the other for a hash/checksum to save bandwidth.
+(R = Total Replicas - W + 1, e.g., R=2 if RF=3 and W=2)
 
 Conflict Resolution (Read Repair): Node H compares the timestamps/versions of the responses. If Node A returns "Version 2" and Node B returns "Version 1", Node H picks Version 2.
 
