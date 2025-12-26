@@ -2,20 +2,24 @@
 
 # <div style="{display: 'flex', alignItems: 'center'}"><img src="a3store-icon.svg" alt="a3store icon" width="32" height="32" style="vertical-align: middle; margin-right: 8px;" /> a3.store - Distributed Key-Value Store</div>
 
-a3.store is a distributed key-value database you can run locally. It is inspired by DynamoDB and Cassandra, but is simple to set up and 3 min to get started.
+a3.store is a distributed key-value database that you can run locally or deploy with a single command. Its architecture is inspired by DynamoDB and Cassandra but with less complexity, making it simple to set up. [Get started in 3 minutes &rarr;](#quick-start-3-minutes)
 
----
 
 ## Quick Start (3 minutes)
 
-1. Clone and enter the node folder:
+### Prerquisites
+- Python
+- docker (optional)
+- nodejs (for client testing)
+
+1 - Clone and enter the node folder:
 
 ```bash
-git clone https://github.com/anasrar/dist-redis.git
-cd dist-redis/kv-node
+git clone https://github.com/anasrar/a3.store.git mystore
+cd mystore/kv-node
 ```
 
-2. Create and activate a Python venv, then install dependencies:
+2 - Create and activate a Python venv, then install dependencies (recommended to use uv):
 
 ```bash
 python3 -m venv .venv
@@ -23,41 +27,61 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Start a 3-node dev cluster (RF=2):
+3 - Start a 3-node dev cluster (RF=2):
+
+#### Docker (recommended):
 
 ```bash
-cd .. && ./scripts/docker.sh
+cd .. && ./scripts/docker.sh # to know more, run: ./scripts/docker.sh help
+```
+
+> This will launch 3 nodes in Docker containers and create a virtual network for them to communicate. Each nodes have its own data directory and volume. You can stop the cluster with `./docker.sh stop`. To get all command options, run `./docker.sh help`.
+
+#### Manual (without Docker):
+
+
+Note: `./kvrun.sh` is the only script you'll find in `./kv-node`.
+
+
+```bash
 # or run interactive nodes:
 ./kvrun.sh   # answer prompts: node, total nodes (3), replication factor (2)
 ```
 
-4. Test with the provided HTTP client:
+To know configuration variables interactively, run `./kvrun.sh check config`. See the [Configuration (env vars)](#configuration-env-vars) section below for details on each variable.
+
+
+4 - Test with the provided HTTP client:
 
 ```bash
-python3 app/http-server/client.py
+node /node-client/app/test.js
+# or use the JS client in your own code (see nodejs-client/grpc_client.js)
+node /node-client/app/app.js
 ```
-
 ---
 
-## What this project implements (short)
+# How it works
 
-- Simple distributed KV store inspired by Dynamo/Riak/Cassandra
-- gRPC for client & inter-node RPCs
-- Gossip for peer discovery
+
+Distributed KV Store:
+- gRPC for client & inter-node RPCs requests
+- Gossip-based membership for peer discovery
 - Anti-entropy using keyspace chunk hashing (16 chunks)
 - SQLite backend (WAL) per node, configurable replication factor
 
----
+Deployment options:
+1. Docker-based local dev cluster (3 nodes)
+2. `minikube` for local k8s testing
+3. AWS CloudFormation for managed infra (see `infra/`)
+
+- - Terraform scripts for AWS infra (see `infra/`)
+- - Kubernetes manifests for EKS deployment (see `k8s/`)
+
+
 
 ## Architecture & Design (visual)
 
-
-High-level diagrams live in `images/` (referenced below):
-
-- `images/distributed_database_architecure.png` — overall topology
-- `images/how_gossip_works.png` — gossip membership flow
-- `images/anti-entropy_chunking_works.png` — chunk hashing and repair
-- `images/deployment-architecture.png` — deployment architecture (EKS)
+High-level diagrams live in `images/`
 
 ### Thread model (concise)
 
@@ -66,15 +90,12 @@ High-level diagrams live in `images/` (referenced below):
 - Gossip thread: lightweight HTTP endpoint for heartbeat/post
 - Background loops: gossip (1s) and anti-entropy (30s)
 
----
-
-## Diagrams & explanations
 
 ### Distributed Database Architecture
 
 ![Distributed Database Architecture](images/distributed_database_architecure.png)
 
-This diagram shows the cluster topology and request flow: clients send `Put`/`Get` to any node; writes are synchronously forwarded to the configured number of replicas (replication factor). Each node runs a local SQLite store (WAL) and exposes gRPC for client and inter-node RPCs. The architecture highlights separation of client-facing traffic, replication paths, and background subsystems (gossip + anti-entropy).
+This diagram shows the cluster topology and request flow: clients send `Put`/`Get` to any node. Writes are synchronously forwarded to the configured number of replicas (replication factor) and wait for Quorum Number(W) this confirms the data consistency across nodes (if during replication some node is down the `PUT` request get pushed to the `HINT` queue - adaopted from Cassandra). Each node runs a local SQLite store (WAL) and exposes gRPC for client and inter-node RPCs. The architecture highlights separation of client-facing traffic, replication paths, and background subsystems (gossip + anti-entropy).
 
 ### How Gossip Works
 
@@ -94,20 +115,40 @@ To efficiently repair divergence, the keyspace is split into 16 chunks. Nodes co
 
 This diagram illustrates a recommended deployment pattern for running `a3.store` on AWS EKS:
 
-- Each KV node runs in its own Kubernetes Pod, with a dedicated PersistentVolumeClaim for SQLite data to ensure durability.
-- gRPC ports are exposed via an internal Service (ClusterIP); a LoadBalancer (or ingress) may be used for external client traffic.
-- A sidecar or init container can be used to provision node-level configuration (NODE_NUM, DATA_DIR) from ConfigMaps and Secrets.
-- Anti-entropy and gossip traffic are internal, kept on the cluster network; cross-AZ affinity or pod anti-affinity should be configured for resilience.
-- For production, pair EKS with managed backing services (EFS/FSx for shared storage if needed, or object storage for backups; and SQS/Redis for queued replication/repair if implementing the future roadmap).
+### Inbound (User traffic)
+1. We have public and private subnets across multiple AZs.
+2. Users send requests to the NLB (Network Load Balancer) via Gateway.
+3. NLB forwards traffic to a EKS Worker Node on the Traefik NodePort (30080/30443) (cos our cluster is inside privte subnet 10.0.0.0/24).
+5. Traefik Controller (Pod) act as a reverse proxy and transfer the request to the correct pods based on ingress rules and request address.
+5. Forwarded request reaches api-serive pod defined api endpoints to access the servies of the kv nodes.
+9. Backend Pod processes the logic:
+  - Reads/Writes to its local EBS Volume (Persistence).
+  - Opens a TCP connection to RDS (Metadata) via the RDS-SG.
+10. Response travels back: Pod → Traefik → Node → NLB → User.
+### Outbound (request to outside services)
+This is done via a NAT Gateway in the public subnet, allowing pods in private subnets to access external services securely.
 
-Security & resilience notes:
-
+## Implemented 
+- Ensure that the security groups (sg) allow necessary traffic (gRPC ports, gossip ports).
+- Autoscale the EKS cluster upto 2 worker nodes based on load using Cluster Autoscaler.
+- Monitor pods and nodes using Prometheus and Grafana for observability.
 - Use NetworkPolicies to limit traffic to gRPC and gossip ports between pods.
 - Configure PodDisruptionBudgets and readiness/liveness probes so replicas remain available during rolling updates.
-- Consider running Prometheus metrics scraping and a Grafana dashboard for observability.
 
 
-## Quick API Reference
+## Want to write your own client request?
+
+```bash
+cd node-client/app
+```
+
+open `app.js` and modify the `PUT` and `GET` requests as needed. Then run:
+
+```bash
+node app.js
+```
+
+## API Reference
 
 Core gRPC service (see `proto/kv.proto`):
 
@@ -124,7 +165,7 @@ service KeyValue {
 }
 ```
 
-Node.js client usage (examples in `nodejs-client/`):
+Node.js client usage (examples in `node-client/`):
 
 ```js
 const client = require('./grpc_client.js');
@@ -136,15 +177,18 @@ client.get('127.0.0.1:50051', 'user:101', (err,res)=>console.log(res));
 
 ## Configuration (env vars)
 
-| Variable | Default | Purpose |
-|---|---:|---|
-| NODE_NUM | `1` | Node id (unique per process) |
-| GRPC_PORT | `50051` | gRPC server port |
-| GOSSIP_PORT | `8001` | Gossip HTTP port |
-| REPLICATION_FACTOR | `2` | Number of replicas |
-| DATA_DIR | `data/node{N}` | SQLite DB dir |
+| Variable             | Default                                              | Purpose                                      |
+|----------------------|-----------------------------------------------------|----------------------------------------------|
+| NODE_NUM             | `1`                                                 | Node id (unique per process)                 |
+| GRPC_PORT            | `50051`                                             | gRPC server port                             |
+| GOSSIP_PORT          | `8001`                                              | Gossip HTTP port                             |
+| PEERS                | `localhost:50051,localhost:50052,localhost:50053`   | Comma-separated peer gRPC addresses          |
+| GOSSIP_PEERS         | `localhost:8001,localhost:8002,localhost:8003`      | Comma-separated peer gossip HTTP addresses   |
+| REPLICATION_FACTOR   | `2`                                                 | Number of replicas                           |
+| DATA_DIR             | `data/node{N}`                                      | SQLite DB dir                                |
+| ANTI_ENTROPY_INTERVAL| `30`                                               | Anti-entropy interval (seconds)              |
+| DEBUG_LOG            | `false`                                             | Enable verbose logging                       |
 
----
 
 ## Debugging & Observability
 
@@ -159,15 +203,6 @@ DEBUG_LOG=true ./kvrun.sh
   - `[GOSSIP]` — membership events
   - `[ANTI-ENTROPY]` — repair rounds and chunk mismatches
 
----
-
-## Troubleshooting checklist
-
-- Ensure ports `50051-50053` and `8001-8003` are free
-- Each node must have its own `DATA_DIR`
-- If diagrams don’t render, place the PNG files under `images/`
-
----
 
 ## Project layout (short)
 

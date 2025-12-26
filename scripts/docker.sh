@@ -15,6 +15,71 @@ if [ "$1" = "clean" ]; then
   exit 0
 fi
 
+# usage helper
+usage() {
+  cat <<EOF
+Usage: ./docker.sh [command]
+
+Commands:
+  help        Show this help message
+  clean       Remove containers and volumes
+  logs        Tail container logs: `logs [all|node1|node2|node3|1|2|3]`
+  stop        Stop running containers (keep volumes)
+  nobuild     Start containers without rebuilding the image
+
+Examples:
+  ./docker.sh           # build and start (default)
+  ./docker.sh nobuild   # start without building
+  ./docker.sh stop      # stop containers
+  ./docker.sh logs all   # tail logs for all nodes
+  ./docker.sh logs 2     # tail logs for node2 (numeric shorthand)
+  ./docker.sh clean     # remove containers and volumes
+EOF
+}
+
+# show help
+if [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+# stop containers (but keep volumes)
+if [ "$1" = "stop" ]; then
+  echo "[*] Stopping KV Node containers"
+  docker stop node1 node2 node3 2>/dev/null || true
+  echo "[*] Containers stopped"
+  exit 0
+fi
+
+# tail container logs
+if [ "$1" = "logs" ]; then
+  TARGET="$2"
+  # map numeric shorthand to container name
+  case "$TARGET" in
+    1|2|3)
+      TARGET="node$TARGET"
+      ;;
+  esac
+
+  if [ -z "$TARGET" ] || [ "$TARGET" = "all" ]; then
+    echo "[*] Tailing logs for node1, node2, node3 (press Ctrl+C to exit)"
+    docker logs -f node1 2>/dev/null & pid1=$!
+    docker logs -f node2 2>/dev/null & pid2=$!
+    docker logs -f node3 2>/dev/null & pid3=$!
+    wait $pid1 $pid2 $pid3
+    exit 0
+  else
+    # check container exists
+    if ! docker ps -a --format '{{.Names}}' | grep -qw "$TARGET"; then
+      echo "[!] Container '$TARGET' not found"
+      exit 1
+    fi
+    echo "[*] Tailing logs for $TARGET (press Ctrl+C to exit)"
+    docker logs -f "$TARGET"
+    exit 0
+  fi
+fi
+
 
 if [ "$1" != "clean" ]; then
   if [ "$1" != "nobuild" ]; then
@@ -23,7 +88,7 @@ if [ "$1" != "clean" ]; then
 
     docker build -t a3store-kv-node:latest .
   fi
-docker network create kvnet || true
+docker network create kvnet || true # create virtual private network for containers to communicate
 
 docker run -d --name node1 --network kvnet \
   -p 50051:50051 \

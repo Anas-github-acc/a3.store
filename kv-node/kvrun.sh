@@ -1,6 +1,52 @@
 #!/usr/bin/env bash
 set -e
 
+# Print usage/help
+print_help() {
+    cat <<'EOF'
+Usage: kvrun.sh [COMMAND]
+
+Commands:
+  help                Show this help message
+  check config        Print configuration variables, defaults and purpose
+
+If no command is provided the script runs in interactive mode to start a node.
+EOF
+}
+
+# Print configuration table for 'check config'
+print_check_config() {
+    cat <<'EOF'
+| Variable             | Default                                              | Purpose                                      |
+|----------------------|-----------------------------------------------------|----------------------------------------------|
+| NODE_NUM             | `1`                                                 | Node id (unique per process)                 |
+| GRPC_PORT            | `50051`                                             | gRPC server port                             |
+| GOSSIP_PORT          | `8001`                                              | Gossip HTTP port                             |
+| PEERS                | `localhost:50051,localhost:50052,localhost:50053`   | Comma-separated peer gRPC addresses          |
+| GOSSIP_PEERS         | `localhost:8001,localhost:8002,localhost:8003`      | Comma-separated peer gossip HTTP addresses   |
+| REPLICATION_FACTOR   | `2`                                                 | Number of replicas                           |
+| DATA_DIR             | `data/node{N}`                                      | SQLite DB dir                                |
+| ANTI_ENTROPY_INTERVAL| `30`                                               | Anti-entropy interval (seconds)              |
+| DEBUG_LOG            | `false`                                             | Enable verbose logging                       |
+EOF
+}
+
+# Handle simple commands
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        help|-h|--help)
+            print_help
+            exit 0
+            ;;
+        check)
+            if [ "$2" = "config" ]; then
+                print_check_config
+                exit 0
+            fi
+            ;;
+    esac
+fi
+
 # ============================================
 # Distributed KV Node Launcher
 # ============================================
