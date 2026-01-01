@@ -2,7 +2,8 @@
 
 # <div style="{display: 'flex', alignItems: 'center'}"><img src="a3store-icon.svg" alt="a3store icon" width="32" height="32" style="vertical-align: middle; margin-right: 8px;" /> a3.store - Distributed Key-Value Store</div>
 
-a3.store is a distributed key-value database that you can run locally or deploy with a single command. Its architecture is inspired by DynamoDB and Cassandra but with less complexity, making it simple to set up. [Get started in 3 minutes &rarr;](#quick-start-3-minutes)
+a3.store is a distributed key–value database inspired by DynamoDB and Cassandra, but intentionally minimal in design. By reducing complexity, it’s easy to run locally or deploy with a single command, making it ideal for early-stage project.
+[Get started in 3 minutes &rarr;](#quick-start-3-minutes)
 
 
 ## Quick Start (3 minutes)
