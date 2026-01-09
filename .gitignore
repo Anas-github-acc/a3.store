@@ -1,1 +1,10 @@
+.env
+.env.local
+
+
 interview.md
+.terraform
+.vscode
+*.hcl
+*.tfstate
+*.tfstate.*

@@ -9,192 +9,141 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region = "ap-south-1"
 }
 
-# -------------------------
-# VPC with 2 private + 2 public subnets, single NAT
-# -------------------------
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 6.5.0"
-
-  name = "${var.project_name}-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs = ["${var.region}a"] # ["${var.region}a", "${var.region}b"] # using only one AZ in dev to save cost
-  private_subnets = ["10.0.0.0/24"] # ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.201.0/24"] # ["10.0.101.0/24", "10.0.102.0/24"]
-
-  enable_nat_gateway   = true
-  single_nat_gateway   = true # cost saving
-
-  enable_dns_hostnames = true
+resource "aws_vpc" "dev_vpc" {
+  cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
+    Name    = "dev-vpc"
     Project = var.project_name
-    Env = "dev"
+    Env     = "dev"
+  }
+
+}
+
+resource "aws_internet_gateway" "dev_igw" {
+  vpc_id = aws_vpc.dev_vpc.id
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.dev_vpc.id
+  cidr_block              = "10.0.0.0/24"
+  map_public_ip_on_launch = true // Enable auto-assign public IPs
+  availability_zone       = "${var.region}a"
+
+  tags = {
+    Name    = "public-subnet"
+    Project = var.project_name
+    Env     = "dev"
   }
 }
 
-# -------------------------
-# EKS Cluster (control plane)
-# -------------------------
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.dev_vpc.id
 
-  cluster_name    = "${var.project_name}-eks"
-  cluster_version = "1.30"
-
-  vpc_id = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-  control_plane_subnet_ids = module.vpc.private_subnets
-
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = true
-
-  enable_irsa = true
-
-  eks_managed_node_groups = {
-    default = {
-      instance_types = [var.worker_instance_type]
-      min_size       = 1
-      max_size       = 3
-      desired_size   = var.worker_desired
-
-      # Cost savings - use spot where possible
-      capacity_type  = "SPOT"
-
-      subnet_ids = module.vpc.private_subnets
-
-      tags = {
-        Project = var.project_name
-        Env = "dev"
-      }
-    }
-  }
-
-  tags = {
-    Project = var.project_name
-    Env = "dev"
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.dev_igw.id
   }
 }
 
-# -------------------------
-# node-sg - allow all outbound, allow inbound from anywhere (for nginx NodePort)
-# -------------------------
-resource "aws_security_group" "node_sg" {
-  name        = "${var.project_name}-node-sg"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = module.vpc.vpc_id
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public_rt.id
 
-  # allow node-to-node (all) inside the private subnets
-  ingress {
-    description = "node to node"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
-  }
+}
 
-  # allow kubelet / nodeport health from the NLB (NLB uses peer ephemeral IPs)
-  # NOTE: NLB doesn't have SG, so this allows any public -> nodePort on 0.0.0.0/0 for nodePort (30080/30443)
-  # For tighter security, restrict to known client IP ranges or use WAF/ALB
+// Security Group
+resource "aws_security_group" "k3s_sg" {
+  name   = "k3s-sg"
+  vpc_id = aws_vpc.dev_vpc.id
+
   ingress {
-    description = "allow nginx nodeport HTTP"
-    from_port   = var.nginx_node_port
-    to_port     = var.nginx_node_port
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] // Allow SSH from anywhere
   }
 
   ingress {
-    description = "allow nginx nodeport HTTPS"
-    from_port   = var.nginx_node_port_https
-    to_port     = var.nginx_node_port_https
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] // Allow HTTP to anywhere
   }
 
-  # allow egress anywhere
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] // Allow HTTPS to anywhere
+  }
+
+  ingress {
+    from_port   = 30000
+    to_port     = 32767
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] // Allow NodePort range
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-node-sg",
-    Project = var.project_name
-    Env = "dev"
+    cidr_blocks = ["0.0.0.0/0"] // Allow all outbound traffic
   }
 }
 
+# EC2 Instance for k3s Master Node
 
+resource "aws_key_pair" "k3s" {
+  key_name   = "newlock955"
+  public_key = file("~/.ssh/newlock955.pub")
+}
 
-# -------------------------
-# rds-sg - only allow from EKS nodes with specified SG
-# -------------------------
-# resource "aws_security_group" "rds_sg" {
-#   name        = "${var.project_name}-rds-sg"
-#   description = "Allow Postgres from EKS nodes SG"
-#   vpc_id      = module.vpc.vpc_id
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
 
-#   ingress {
-#     from_port   = 5432
-#     to_port     = 5432
-#     protocol    = "tcp"
-#     security_groups = [aws_security_group.node_sg.id] # node_sg to rds_sg (sg to sg) -- !initially this was cidr_blocks = module.vpc.private_subnets_cidr_blocks allowing all the ec2 instances to access rds
-#   }
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
 
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
+resource "aws_instance" "k3s_dev" {
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t3.micro"
+  subnet_id     = aws_subnet.public.id
+  # security_groups = [aws_security_group.k3s_sg.name]
+  vpc_security_group_ids = [aws_security_group.k3s_sg.id]
+  key_name               = aws_key_pair.k3s.key_name
 
-#   tags = {
-#     Name = "${var.project_name}-rds-sg",
-#     Project = var.project_name
-#     Env = "dev"
-#   }
-# }
+  root_block_device {
+    volume_size = 15
+    volume_type = "gp3"
+  }
 
-# -------------------------
-# RDS - cheap PostgreSQL for metadata
-# -------------------------
-# module "rds" {
-#   source  = "terraform-aws-modules/rds/aws"
-#   version = "~> 6.0"
+  user_data = <<-EOF
+    #!/bin/bash
+    set -e
 
-#   identifier = "${var.project_name}-rds"
+    curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_SELINUX_RPM=true sh -
 
-#   engine            = "postgres"
-#   engine_version    = "16.3"
-#   family            = "postgres16"
-#   instance_class    = "db.t3.micro"
-#   allocated_storage = 20
+    mkdir -p /home/ec2-user/.kube
+    cp /etc/rancher/k3s/k3s.yaml /home/ec2-user/.kube/config
+    chown -R ec2-user:ec2-user /home/ec2-user/.kube
 
-#   db_name  = var.rds_db_name
-#   username = var.rds_username
-#   password = var.rds_password
-#   port     = 5432
+    echo 'export KUBECONFIG=/home/ec2-user/.kube/config' >> /home/ec2-user/.bashrc
+  EOF
 
-#   multi_az               = false
-#   publicly_accessible    = false
-#   storage_encrypted      = true
-#   deletion_protection    = false
-#   skip_final_snapshot    = true
-
-#   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-#   subnet_ids             = module.vpc.private_subnets
-
-#   tags = {
-#     Project = var.project_name
-#     Env = "dev"
-#   }
-# }
+  tags = {
+    Name    = "k3s-dev"
+    Project = var.project_name
+    Env     = "dev"
+  }
+}

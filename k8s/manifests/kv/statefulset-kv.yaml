@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: kv-node
-          image: anasahamad/a3store-kv-node:v1.0.6
+          image: anasahamad/a3store-kv-node:latest
           ports:
             - containerPort: 50051
               name: grpc

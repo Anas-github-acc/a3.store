@@ -7,6 +7,7 @@ import { FeatureCard } from "@/components/landing/FeatureCard";
 import { TechStack } from "@/components/landing/TechStack";
 import { HeroGradient } from "@/components/landing/HeroGradient";
 import { InfoTabs } from "@/components/landing/InfoTabs";
+import { A3Button } from "@/components/ui/a3.button";
 // import Image from "next/image";
 
 const features = [
@@ -133,6 +134,7 @@ export default function Landing() {
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </GlowButton>
                 </Link>
+                <A3Button>Open Dashboard</A3Button>
                 <a href="https://github.com/Anas-github-acc/a3.store.git" target="_blank" rel="noopener noreferrer">
                   <GlowButton size="lg" variant="outline" className="gap-2">
                     <Github className="w-4 h-4" />

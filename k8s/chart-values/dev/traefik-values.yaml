@@ -1,0 +1,34 @@
+deployment:
+  podAnnotations: {}
+
+additionalArguments: []
+
+service:
+  type: ClusterIP
+
+ports:
+  web:
+    # redirectTo: websecure # -- redirect HTTP to HTTPS (now no need for HTTP listener)
+    port: 8080 # Traefik internal port
+    expose:
+      default: true
+    protocol: TCP
+    hostPort: 80
+  websecure:
+    port: 8443 # Traefik internal port
+    expose:
+      default: true 
+    protocol: TCP
+    hostPort: 443
+
+  # The Dashboard/API EntryPoint (Internal 9000)
+  # explicitly set to 9000 to avoid "duplicate 8080" error
+  traefik:
+    port: 9000
+    expose:
+      default: false # not exposed to the NLB by default
+    protocol: TCP
+
+ingressclass:
+  enabled: true
+  isdefaultclass: true

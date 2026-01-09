@@ -1,0 +1,98 @@
+.default-base {
+  cursor: pointer;
+  flex-flow: row;
+  place-content: center;
+  align-items: center;
+  gap: 8px;
+  width: min-content;
+  height: min-content;
+  padding: 12px 20px;
+  text-decoration: none;
+  display: flex;
+  position: relative;
+  overflow: visible;
+}
+
+.default-back-shadow {
+  background: radial-gradient(50% 50%, rgb(255, 255, 255) 52.8846%, rgb(140, 54, 2) 100%);
+  filter: blur(3px);
+  border-radius: 100%;
+  opacity: 1;
+}
+
+.default-back-shadow-pos {
+  z-index: 0;
+  flex: none;
+  height: 47px;
+  position: absolute;
+  top: -4px;
+  left: 9px;
+  right: 9px;
+}
+
+
+.default-button {
+  background-color: var(--token-7bddd129-833e-4592-8d35-b38628f5587c, rgb(0, 0, 0));
+  border-radius: 12px;
+  opacity: 1;
+  z-index: 1;
+  flex: none;
+  gap: 8px;
+  position: absolute;
+  inset: 1px;
+  overflow: visible;
+}
+
+.default-content-wrapper {
+  opacity: 1;
+  flex-flow: column;
+  flex: none;
+  place-content: center flex-start;
+  align-items: center;
+  gap: 0;
+  width: min-content;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.default-content {
+  --framer-paragraph-spacing: 0px;
+  transform: none;
+  opacity: 1;
+  white-space: pre;
+  z-index: 1;
+  flex: none;
+  width: auto;
+  height: auto;
+  position: relative;
+}
+
+.default-content p {
+  --framer-font-family: "Inter", "Inter Placeholder", sans-serif;
+  --framer-font-family-bold: "Inter", "Inter Placeholder", sans-serif;
+  --framer-font-family-bold-italic: "Inter", "Inter Placeholder", sans-serif;
+  --framer-font-family-italic: "Inter", "Inter Placeholder", sans-serif;
+  --framer-font-open-type-features: "blwf" on, "cv09" on, "cv03" on, "cv04" on, "cv11" on;
+  --framer-font-size: 16px;
+  --framer-font-style: normal;
+  --framer-font-style-bold: normal;
+  --framer-font-style-bold-italic: italic;
+  --framer-font-style-italic: italic;
+  --framer-font-variation-axes: normal;
+  --framer-font-weight: 500;
+  --framer-font-weight-bold: 700;
+  --framer-font-weight-bold-italic: 700;
+  --framer-font-weight-italic: 500;
+  --framer-letter-spacing: 0em;
+  --framer-line-height: 26px;
+  --framer-paragraph-spacing: 20px;
+  --framer-text-alignment: start;
+  --framer-text-color: var(--token-2ff9a6d4-dab7-4ef6-b4fa-9e88617ec594, #fff);
+  --framer-text-decoration: none;
+  --framer-text-stroke-color: initial;
+  --framer-text-stroke-width: initial;
+  --framer-text-transform: none;
+}

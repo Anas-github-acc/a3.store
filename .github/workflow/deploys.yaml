@@ -1,0 +1,38 @@
+# name: Continous Deployment
+
+# on:
+#   push:
+#     branches: [ main ]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+    # - name: Checkout
+    #   uses: actions/checkout@v4
+
+    # - name: Login to Docker Hub
+    #   run: |
+    #     echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
+    #     docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+    # - name: Build image
+    #   run: |
+    #     docker build -t docker.io/${{ secrets.DOCKERHUB_USERNAME }}/kv-api:latest .
+
+    # - name: Push image
+    #   run: |
+    #     docker push docker.io/${{ secrets.DOCKERHUB_USERNAME }}/kv-api:latest
+
+    # - name: Deploy to EC2
+    #   uses: appleboy/ssh-action@v1.0.3
+    #   with:
+    #     host: ${{ secrets.EC2_HOST }}
+    #     username: ec2-user
+    #     key: ${{ secrets.EC2_SSH_KEY }}
+    #     script: |
+    #       set -e
+    #       kubectl apply -f k8s/namespace.yaml
+    #       kubectl apply -f k8s/manifests/
+    #       bash install.sh dev
