@@ -115,9 +115,19 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
+data "aws_ami" "amazon_linux_arm" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-arm64-gp2"]
+  }
+}
+
 resource "aws_instance" "k3s_dev" {
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.medium"
+  ami           = data.aws_ami.amazon_linux_arm.id
+  instance_type = "t4g.small"
   subnet_id     = aws_subnet.public.id
   # security_groups = [aws_security_group.k3s_sg.name]
   vpc_security_group_ids = [aws_security_group.k3s_sg.id]
@@ -128,7 +138,7 @@ resource "aws_instance" "k3s_dev" {
 
     spot_options {
       spot_instance_type = "one-time"
-      instance_interruption_behavior = "stop"
+      instance_interruption_behavior = "terminate"
     }
   }
 

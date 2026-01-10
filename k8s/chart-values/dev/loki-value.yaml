@@ -1,8 +1,9 @@
 loki:
   config:
+    limits_config:
+      retention_period: 48h
     table_manager:
       retention_deletes_enabled: true
-      retention_period: 48h
 
 promtail:
   enabled: true
