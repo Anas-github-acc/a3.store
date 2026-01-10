@@ -117,15 +117,25 @@ data "aws_ami" "amazon_linux_2" {
 
 resource "aws_instance" "k3s_dev" {
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = "t3.micro"
+  instance_type = "t3.medium"
   subnet_id     = aws_subnet.public.id
   # security_groups = [aws_security_group.k3s_sg.name]
   vpc_security_group_ids = [aws_security_group.k3s_sg.id]
   key_name               = aws_key_pair.k3s.key_name
 
+  instance_market_options {
+    market_type = "spot"
+
+    spot_options {
+      spot_instance_type = "one-time"
+      instance_interruption_behavior = "stop"
+    }
+  }
+
   root_block_device {
     volume_size = 15
     volume_type = "gp3"
+    delete_on_termination = false
   }
 
   user_data = <<-EOF
