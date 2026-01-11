@@ -3,14 +3,18 @@ kind: IngressRoute
 metadata:
   name: main-route
   namespace: kv
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   entryPoints:
-    - web        # Port 80
+    # - web        # Port 80
     - websecure  # Port 443 (recommended: have to enable TLS configured)
   routes:
-    # - match: Host(`{{ aws provided dns name }}`) && PathPrefix(`/api`)
-    - match: PathPrefix(`/`)
+    - match: Host(`api.a3store.duckdns.org`) && PathPrefix(`/`)
+    # - match: PathPrefix(`/`)
       kind: Rule
       services:
         - name: api-service
           port: 80
+  tls:
+    secretName: api-tls

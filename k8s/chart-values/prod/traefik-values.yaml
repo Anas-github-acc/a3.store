@@ -11,15 +11,9 @@ service:
 
 ports:
   web:
-    # redirectTo: websecure # -- redirect HTTP to HTTPS (now no need for HTTP listener)
-    port: 8080 # Traefik internal port
-    expose:
-      default: true
-    exposedPort: 80 # NLB listener port
-    protocol: TCP
-    nodePort: 30080 # our fixed nodePort for HTTP
+    redirectTo: websecure
   websecure:
-    port: 8443 # Traefik internal port
+    port: 8443
     expose:
       default: true
     exposedPort: 443 # NLB listener port

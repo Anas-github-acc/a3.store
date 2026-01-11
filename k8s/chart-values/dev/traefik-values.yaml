@@ -8,14 +8,14 @@ service:
 
 ports:
   web:
-    # redirectTo: websecure # -- redirect HTTP to HTTPS (now no need for HTTP listener)
-    port: 8080 # Traefik internal port
-    expose:
-      default: true
-    protocol: TCP
-    hostPort: 80
+    redirectTo: websecure
+    # port: 8080
+    # expose:
+    #   default: true
+    # protocol: TCP
+    # hostPort: 80
   websecure:
-    port: 8443 # Traefik internal port
+    port: 8443
     expose:
       default: true 
     protocol: TCP
