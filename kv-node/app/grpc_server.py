@@ -8,7 +8,7 @@ import kv_pb2, kv_pb2_grpc
 from gossip import membership
 from anti_entropy import CHUNK_COUNT, compute_chunk_hash
 
-from metrics import grpc_requests, grpc_latency, grpc_errors, replication_attempts, replication_failures
+from metrics import grpc_requests, grpc_latency, grpc_errors, replication_attempts, replication_failures, http_requests_total
 
 # Logging switch - set DEBUG_LOG=true to enable detailed logging
 DEBUG_LOG = os.environ.get("DEBUG_LOG", "false").lower() == "true"
@@ -82,6 +82,7 @@ class KeyValueServicer(kv_pb2_grpc.KeyValueServicer):
 
     def Put(self, request, context):
         grpc_requests.labels("Put").inc() # -- prometheus metric
+        http_requests_total.labels(method="PUT", path="/kv").inc()
         with grpc_latency.labels("Put").time():
             try:
                 key = request.key
@@ -121,6 +122,7 @@ class KeyValueServicer(kv_pb2_grpc.KeyValueServicer):
 
     def Get(self, request, context):
         grpc_requests.labels("Get").inc()
+        http_requests_total.labels(method="GET", path="/kv").inc()
         with grpc_latency.labels("Get").time():
             try:
                 result = self.storage.get(request.key)

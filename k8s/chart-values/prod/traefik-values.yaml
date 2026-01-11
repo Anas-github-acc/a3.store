@@ -11,7 +11,11 @@ service:
 
 ports:
   web:
-    redirectTo: websecure
+    port: 8080
+    expose:
+      default: true
+    protocol: TCP
+    hostPort: 80
   websecure:
     port: 8443
     expose:

@@ -3,6 +3,8 @@
 set -e
 
 # O=0: only kv-node, O=1: only api, O=2: both (default)
+# F = 0 -> only build and push kv-node
+# F = 1 -> only build and push api
 F="${F:-2}"
 
 # Multi-arch platforms (default: linux/amd64,linux/arm64)

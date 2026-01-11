@@ -21,6 +21,10 @@ spec:
           env:
             - name: KV_GRPC_TARGET
               value: "kv-headless.kv.svc.cluster.local:50051"
+            - name: PROMETHEUS_URL
+              value: http://prometheus-server.monitoring.svc.cluster.local
+            - name: LOKI_URL
+              value: http://loki.monitoring.svc.cluster.local:3100
           # Resource requests and limits - due to error
           resources:
             requests:
@@ -29,3 +33,4 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+

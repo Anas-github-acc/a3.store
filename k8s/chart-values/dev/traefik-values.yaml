@@ -1,19 +1,20 @@
 deployment:
   podAnnotations: {}
 
-additionalArguments: []
+additionalArguments:
+  - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+  - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
 service:
   type: ClusterIP
 
 ports:
   web:
-    redirectTo: websecure
-    # port: 8080
-    # expose:
-    #   default: true
-    # protocol: TCP
-    # hostPort: 80
+    port: 8080
+    expose:
+      default: true
+    protocol: TCP
+    hostPort: 80
   websecure:
     port: 8443
     expose:

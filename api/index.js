@@ -190,14 +190,21 @@ app.get("/api/metrics/summary", async (_, res) => {
   try {
     const queries = {
       // Node health
-      nodes_up: 'count(kv_node_up == 1)',
-      nodes_total: 'count(kv_node_up)',
+      nodes_up: 'sum(kv_node_up)',
+      nodes_total: 'count by () (kv_node_up)',
+      // HTTP metrics
+      http_requests_total: 'sum(kv_http_requests_total)',
+      http_get_requests: 'sum(kv_http_requests_total{method="GET"})',
+      http_put_requests: 'sum(kv_http_requests_total{method="PUT"})',
       // gRPC metrics
       grpc_requests_total: 'sum(kv_grpc_requests_total)',
       grpc_requests_by_method: 'sum by (method) (kv_grpc_requests_total)',
+
       grpc_errors_total: 'sum(kv_grpc_errors_total)',
       grpc_errors_by_method: 'sum by (method) (kv_grpc_errors_total)',
-      grpc_latency_avg: 'avg(rate(kv_grpc_latency_seconds_sum[5m]) / rate(kv_grpc_latency_seconds_count[5m]))',
+      // Correct latency
+      grpc_latency_avg:
+        'sum(rate(kv_grpc_latency_seconds_sum[15m])) / sum(rate(kv_grpc_latency_seconds_count[15m]))',
       // Replication metrics
       replication_attempts_total: 'sum(kv_replication_attempts_total)',
       replication_failures_total: 'sum(kv_replication_failures_total)',
@@ -208,21 +215,25 @@ app.get("/api/metrics/summary", async (_, res) => {
 
     const results = {};
 
-    for (const [key, query] of Object.entries(queries)) {
-      const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
-        params: { query }
-      });
+    const entries = await Promise.all(
+      Object.entries(queries).map(async ([key, query]) => {
+        const r = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
+          params: { query }
+        });
+        return [key, r.data.data.result];
+      })
+    );
 
-      const result = r.data.data.result;
+    for (const [key, result] of entries) {
       if (result.length === 0) {
         results[key] = key.includes('_by_method') ? {} : 0;
       } else if (key.includes('_by_method')) {
-        results[key] = result.reduce((acc, item) => {
-          acc[item.metric.method] = Number(item.value[1]);
-          return acc;
-        }, {});
+        results[key] = Object.fromEntries(
+          result.map(r => [r.metric.method, Number(r.value[1])])
+        );
       } else {
-        results[key] = Number(result[0]?.value?.[1] || 0);
+        const v = Number(result[0].value[1]);
+        results[key] = Number.isFinite(v) ? v : 0;
       }
     }
 
@@ -294,7 +305,7 @@ app.get("/api/anti-entropy/events", async (_, res) => {
     const now = Date.now() * 1e6;
     const fifteenMinAgo = now - 15 * 60 * 1e9;
 
-    const query = '{app="kv-node"} |= "anti-entropy" | json | line_format "{{.log}}" | json';
+    const query = '{app="kv-node"} |= "anti-entropy" | json';
 
     const r = await axios.get(
       `${LOKI_URL}/loki/api/v1/query_range`,
@@ -310,8 +321,18 @@ app.get("/api/anti-entropy/events", async (_, res) => {
     );
 
     const events = r.data.data.result.flatMap(stream =>
-      stream.values.map(([ts, line]) => JSON.parse(line))
-    );
+      stream.values.map(([ts, line]) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+    ).filter(Boolean)
+
+    // const events = r.data.data.result.flatMap(stream =>
+    //   stream.values.map(([ts, line]) => line)
+    // );
 
     res.json(events);
   } catch (e) {

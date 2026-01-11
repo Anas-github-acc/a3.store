@@ -1,5 +1,12 @@
 from prometheus_client import Counter, Histogram, Gauge
 
+
+http_requests_total = Counter(
+    "kv_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path"]
+)
+
 # ---- Node ----
 node_up = Gauge(
     "kv_node_up",

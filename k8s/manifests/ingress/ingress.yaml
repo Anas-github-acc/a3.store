@@ -10,7 +10,7 @@ spec:
     # - web        # Port 80
     - websecure  # Port 443 (recommended: have to enable TLS configured)
   routes:
-    - match: Host(`api.a3store.duckdns.org`) && PathPrefix(`/`)
+    - match: Host(`a3store.mooo.com`) && PathPrefix(`/`)
     # - match: PathPrefix(`/`)
       kind: Rule
       services:
