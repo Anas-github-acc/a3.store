@@ -126,7 +126,8 @@ data "aws_ami" "amazon_linux_arm" {
 }
 
 resource "aws_instance" "k3s_dev" {
-  ami           = data.aws_ami.amazon_linux_arm.id
+  # ami           = data.aws_ami.amazon_linux_arm.id
+  ami           = "ami-0b795ee5164356101"
   instance_type = "t4g.small"
   subnet_id     = aws_subnet.public.id
   # security_groups = [aws_security_group.k3s_sg.name]

@@ -34,5 +34,7 @@
     #     script: |
     #       set -e
     #       kubectl apply -f k8s/namespace.yaml
-    #       kubectl apply -f k8s/manifests/
+    #       kubectl apply -f k8s/manifests/api
+    #       kubectl apply -f k8s/manifests/ingress
+    #       kubectl apply -f k8s/manifests/kv
     #       bash install.sh dev

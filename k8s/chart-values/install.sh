@@ -59,11 +59,10 @@ if [ "$COMPONENT" = "monitor" ] || [ "$COMPONENT" = "all" ]; then
   echo ""
 
   helm upgrade --install prometheus prometheus-community/prometheus \
-    --namespace monitoring --create-namespace \
-    --set alertmanager.enabled=false \
-    --set pushgateway.enabled=false \
-    --set server.resources.requests.memory=200Mi \
-    --set server.resources.limits.memory=300Mi
+  --namespace monitoring --create-namespace \
+  -f values-prometheus.yaml \
+  --set alertmanager.enabled=false \
+  --set pushgateway.enabled=false
   
   # helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   #   --skip-crds \
@@ -82,7 +81,7 @@ if [ "$COMPONENT" = "loki" ] || [ "$COMPONENT" = "all" ]; then
 
   helm upgrade --install loki grafana/loki-stack \
     -n monitoring \
-    -f ${ENV}/values-loki.yaml
+    -f ${ENV}/loki-values.yaml
   echo "[-] Installed Loki stack with Promtail (without Grafana) in monitoring namespace"
 fi
 

@@ -5,22 +5,32 @@ set -e
 # O=0: only kv-node, O=1: only api, O=2: both (default)
 F="${F:-2}"
 
+# Multi-arch platforms (default: linux/amd64,linux/arm64)
+PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
+
 docker_images=()
 
-if [ "$F" == "0" ]; then
-  (cd ../kv-node && docker build -t a3store-kv-node:latest .)
-  docker_images+=("a3store-kv-node:latest")
-  echo "[-] Docker Build complete: a3store-kv-node"
-elif [ "$F" == "1" ]; then
-  (cd ../api && docker build -t a3store-api:latest .)
-  docker_images+=("a3store-api:latest")
-  echo "[-] Docker Build complete: a3store-api"
-else
-  (cd ../kv-node && docker build -t a3store-kv-node:latest .)
-  (cd ../api && docker build -t a3store-api:latest .)
-  docker_images+=("a3store-kv-node:latest" "a3store-api:latest")
-  echo "[-] Docker Build complete: both images"
-fi
+# Setup buildx builder for multi-arch support
+setup_buildx() {
+  echo "Setting up Docker buildx for multi-architecture builds..."
+  
+  # Check if builder exists
+  if ! docker buildx inspect multiarch-builder >/dev/null 2>&1; then
+    echo "Creating new buildx builder: multiarch-builder"
+    docker buildx create --name multiarch-builder --driver docker-container --use
+  else
+    echo "Using existing buildx builder: multiarch-builder"
+    docker buildx use multiarch-builder
+  fi
+  
+  # Bootstrap the builder
+  docker buildx inspect --bootstrap
+  echo "Buildx setup complete. Target platforms: ${PLATFORMS}"
+  echo ""
+}
+
+# Setup buildx before building
+setup_buildx
 
 VERSION="${VERSION:-v1}" # VERSION="v2" ./dockerupload.sh
 
@@ -116,67 +126,47 @@ fi
 echo ""
 echo "Using ${DOCKER_USER}"
 echo "Version Tag: ${VERSION}"
+echo "Platforms: ${PLATFORMS}"
 echo ""
 
-for image in "${docker_images[@]}"; do
-  
-  image_name="${image%%:*}"
-  
-  if ! docker image inspect "$image" >/dev/null 2>&1; then
-    echo "Image ${image} not found locally. Skipping..."
+# Build and push multi-arch images using buildx
+for component in kv-node api; do
+  # Check which images to build based on F flag
+  if [ "$F" == "0" ] && [ "$component" == "api" ]; then
+    continue
+  fi
+  if [ "$F" == "1" ] && [ "$component" == "kv-node" ]; then
     continue
   fi
   
-  # remote tag
-  remote_tag="${DOCKER_USER}/${image_name}:${VERSION}"
-  docker tag "$image" "$remote_tag"
-  docker push "$remote_tag"
+  image_name="a3store-${component}"
+  docker_images+=("${image_name}")
   
-  # 'latest' tag
-  latest_tag="${DOCKER_USER}/${image_name}:latest"
-  docker tag "$image" "$latest_tag"
+  echo "Building and pushing multi-arch image: ${image_name}"
   
-  echo "  Pushing: ${latest_tag}"
-  docker push "$latest_tag"
+  # Build and push with both version tag and latest tag
+  cd "../${component}"
   
+  docker buildx build \
+    --platform "${PLATFORMS}" \
+    --tag "${DOCKER_USER}/${image_name}:${VERSION}" \
+    --tag "${DOCKER_USER}/${image_name}:latest" \
+    --push \
+    .
+  
+  cd - > /dev/null
+  
+  echo "  ✓ Pushed: ${DOCKER_USER}/${image_name}:${VERSION}"
+  echo "  ✓ Pushed: ${DOCKER_USER}/${image_name}:latest"
   echo ""
 done
 
 echo "=== Upload Complete ==="
 echo ""
-echo "Pushed images:"
+echo "Pushed multi-arch images for platforms: ${PLATFORMS}"
 for image in "${docker_images[@]}"; do
-  image_name="${image%%:*}"
-  echo "  - ${DOCKER_USER}/${image_name}:${VERSION}"
-  echo "  - ${DOCKER_USER}/${image_name}:latest"
+  echo "  - ${DOCKER_USER}/${image}:${VERSION}"
+  echo "  - ${DOCKER_USER}/${image}:latest"
 done
-
-# Cleanup: remove local images matching the major-version prefix (e.g. v1*),
-# but keep the current ${VERSION} and keep any :latest tags.
-# Example: VERSION="v1.0.3" -> major_prefix="v1"
-major_prefix="${VERSION%%.*}"
 echo ""
-echo "Cleaning up local images with prefix ${major_prefix} (excluding ${VERSION} and latest)..."
-
-for image in "${docker_images[@]}"; do
-  image_name="${image%%:*}"
-
-  # list repository:tag entries for this repo under DOCKER_USER
-  docker images --format '{{.Repository}}:{{.Tag}}' | grep -E "^${DOCKER_USER}/${image_name}:" | while read -r repo_tag; do
-    tag=${repo_tag#${DOCKER_USER}/${image_name}:}
-    # skip latest and the just-pushed version
-    if [ "${tag}" = "latest" ] || [ "${tag}" = "${VERSION}" ]; then
-      continue
-    fi
-    # if tag starts with major_prefix (e.g., v1), remove it
-    if [[ "${tag}" == ${major_prefix}* ]]; then
-      echo "Removing local image: ${DOCKER_USER}/${image_name}:${tag}"
-      docker rmi -f "${DOCKER_USER}/${image_name}:${tag}" >/dev/null 2>&1 || true
-      # also try removing unprefixed local tag if exists
-      echo "Removing local image: ${image_name}:${tag} (if present)"
-      docker rmi -f "${image_name}:${tag}" >/dev/null 2>&1 || true
-    fi
-  done
-done
-
-echo "Cleanup complete."
+echo "Note: Multi-arch images are pushed directly. No local cleanup needed."

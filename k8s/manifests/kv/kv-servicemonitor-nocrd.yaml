@@ -1,0 +1,18 @@
+server:
+  global:
+    scrape_interval: 15s
+
+  extraScrapeConfigs:
+    - job_name: "kv-nodes"
+      kubernetes_sd_configs:
+        - role: endpoints
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          action: keep
+          regex: kv
+        - source_labels: [__meta_kubernetes_service_label_app]
+          action: keep
+          regex: kv-node
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: gossip

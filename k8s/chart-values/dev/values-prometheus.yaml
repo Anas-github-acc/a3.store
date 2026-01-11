@@ -1,45 +1,64 @@
-prometheus:
-  prometheusSpec:
-    serviceMonitorSelectorNilUsesHelmValues: false
+server:
+  global:
+    scrape_interval: 15s
+
+  extraScrapeConfigs:
+    - job_name: "kv-nodes"
+      kubernetes_sd_configs:
+        - role: endpoints
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          action: keep
+          regex: kv
+        - source_labels: [__meta_kubernetes_service_label_app]
+          action: keep
+          regex: kv-node
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: gossip
+
+# prometheus:
+#   prometheusSpec:
+#     serviceMonitorSelectorNilUsesHelmValues: false
     
-    # Storage settings 15days --> 2days
-    retention: 2d
-    retentionSize: 2GB
+#     # Storage settings 15days --> 2days
+#     retention: 2d
+#     retentionSize: 2GB
 
-    # Scrape and evaluation intervals 15s --> 30s
-    scrapeInterval: 30s
-    evaluationInterval: 30s
+#     # Scrape and evaluation intervals 15s --> 30s
+#     scrapeInterval: 30s
+#     evaluationInterval: 30s
 
-    # Resource requests/limits 
-    resources:
-      requests:
-        cpu: 100m
-        memory: 300Mi
-      limits:
-        cpu: 300m
-        memory: 500Mi
+#     # Resource requests/limits 
+#     resources:
+#       requests:
+#         cpu: 100m
+#         memory: 300Mi
+#       limits:
+#         cpu: 300m
+#         memory: 500Mi
 
-grafana:
-  resources:
-    requests:
-      cpu: 50m
-      memory: 100Mi
-    limits:
-      cpu: 200m
-      memory: 200Mi
+# grafana:
+#   resources:
+#     requests:
+#       cpu: 50m
+#       memory: 100Mi
+#     limits:
+#       cpu: 200m
+#       memory: 200Mi
 
-alertmanager:
-  enabled: false
+# alertmanager:
+#   enabled: false
 
-prometheusOperator:
-  admissionWebhooks:
-    enabled: false
+# prometheusOperator:
+#   admissionWebhooks:
+#     enabled: false
 
-kubeControllerManager:
-  enabled: false
+# kubeControllerManager:
+#   enabled: false
 
-kubeScheduler:
-  enabled: false
+# kubeScheduler:
+#   enabled: false
 
-kubeEtcd:
-  enabled: false
+# kubeEtcd:
+#   enabled: false
