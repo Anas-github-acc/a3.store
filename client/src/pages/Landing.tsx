@@ -90,16 +90,16 @@ export default function Landing() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 lg:py-32">
           <div className="grid lg:grid-cols-2 gap-[7rem] items-center">
             <div className="space-y-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Dynamo-Inspired Architecture
-                </span>
-              </motion.div>
+              {/* <motion.div */}
+              {/*   initial={{ opacity: 0, y: 20 }} */}
+              {/*   animate={{ opacity: 1, y: 0 }} */}
+              {/*   transition={{ delay: 0.1 }} */}
+              {/* > */}
+              {/*   <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium"> */}
+              {/*     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> */}
+              {/*     Dynamo-Inspired Architecture */}
+              {/*   </span> */}
+              {/* </motion.div> */}
               
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
