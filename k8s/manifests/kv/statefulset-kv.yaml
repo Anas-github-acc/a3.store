@@ -18,9 +18,27 @@ spec:
       labels:
         app: kv-node
     spec:
+      ffinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - kv-node
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: kv-node
           image: anasahamad/a3store-kv-node:latest
+
+
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+
           ports:
             - containerPort: 50051
               name: grpc
