@@ -1,0 +1,17 @@
+subscription_id = "YOUR-AZURE-SUBSCRIPTION-ID"
+
+location = "centralindia"
+
+resource_group_name = "a3store-rg"
+
+aks_name = "a3store-aks"
+
+acr_name = "a3storeanas12345"
+
+node_vm_size = "Standard_DS2_v2"
+
+min_nodes = 1
+max_nodes = 3
+
+grafana_name = "a3store-grafana"
+monitor_workspace_name = "a3store-prometheus"

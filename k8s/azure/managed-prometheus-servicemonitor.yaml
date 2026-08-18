@@ -1,0 +1,26 @@
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+
+metadata:
+  name: a3store-kv
+  namespace: kv
+
+spec:
+  labelLimit: 63
+
+  labelNameLengthLimit: 511
+
+  labelValueLengthLimit: 1023
+
+  selector:
+    matchLabels:
+      app: kv-node
+
+  namespaceSelector:
+    matchNames:
+      - kv
+
+  endpoints:
+    - port: gossip
+      path: /metrics
+      interval: 15s

@@ -1,56 +1,73 @@
 apiVersion: apps/v1
 kind: StatefulSet
+
 metadata:
   name: kv
   namespace: kv
+
 spec:
   serviceName: kv-headless
+
   replicas: 3
+
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
       partition: 0
+
   selector:
     matchLabels:
       app: kv-node
+
   template:
     metadata:
       labels:
         app: kv-node
+        app.kubernetes.io/name: a3store-kv
+        app.kubernetes.io/part-of: a3store
+
     spec:
+      terminationGracePeriodSeconds: 30
+
       affinity:
         podAntiAffinity:
+
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
+
               podAffinityTerm:
+
                 labelSelector:
                   matchExpressions:
                     - key: app
                       operator: In
                       values:
                         - kv-node
+
                 topologyKey: kubernetes.io/hostname
+
       containers:
         - name: kv-node
-          image: anasahamad/a3store-kv-node:latest
 
+          image: ${KV_IMAGE}
 
-          volumeMounts:
-            - name: data
-              mountPath: /app/data
+          imagePullPolicy: IfNotPresent
 
           ports:
-            - containerPort: 50051
-              name: grpc
-            - containerPort: 8001
-              name: gossip
-          
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+
+            - name: gossip
+              containerPort: 8001
+              protocol: TCP
+
           env:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            
+
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -72,47 +89,68 @@ spec:
 
             - name: OWN_ADDR
               value: "$(POD_NAME).kv-headless.$(POD_NAMESPACE).svc.cluster.local:50051"
-            
-            # gRPC peers (all nodes)
-            - name: PEERS
-              value: >
-                kv-0.kv-headless.kv.svc.cluster.local:50051,
-                kv-1.kv-headless.kv.svc.cluster.local:50051,
-                kv-2.kv-headless.kv.svc.cluster.local:50051
 
-            # Gossip peers
+            - name: PEERS
+              value: "kv-0.kv-headless.kv.svc.cluster.local:50051,kv-1.kv-headless.kv.svc.cluster.local:50051,kv-2.kv-headless.kv.svc.cluster.local:50051"
+
             - name: GOSSIP_PEERS
-              value: >
-                kv-0.kv-headless.kv.svc.cluster.local:8001,
-                kv-1.kv-headless.kv.svc.cluster.local:8001,
-                kv-2.kv-headless.kv.svc.cluster.local:8001
-            
+              value: "kv-0.kv-headless.kv.svc.cluster.local:8001,kv-1.kv-headless.kv.svc.cluster.local:8001,kv-2.kv-headless.kv.svc.cluster.local:8001"
+
             - name: REPLICATION_FACTOR
               value: "2"
 
-            # Debug logging
             - name: DEBUG_LOG
               value: "true"
 
+          resources:
+
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+
           readinessProbe:
+
             httpGet:
               path: /healthz
-              port: 8001
+              port: gossip
+
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
 
           livenessProbe:
+
             tcpSocket:
-              port: 50051
+              port: grpc
+
             initialDelaySeconds: 15
             periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
 
-  #  most possible since we have not defined any StorageClass it will chose AWS EBS gp2 as default
   volumeClaimTemplates:
     - metadata:
         name: data
+
+        labels:
+          app: kv-node
+
       spec:
-        accessModes: ["ReadWriteOnce"]
+
+        accessModes:
+          - ReadWriteOnce
+
+        storageClassName: default
+
         resources:
           requests:
             storage: 1Gi

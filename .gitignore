@@ -5,6 +5,9 @@
 interview.md
 .terraform
 .vscode
-*.hcl
 *.tfstate
 *.tfstate.*
+
+*.tfvars
+
+# DO NOT ignore .terraform.lock.hcl.

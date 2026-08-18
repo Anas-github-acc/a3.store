@@ -1,0 +1,215 @@
+name: Deploy a3.store to Azure AKS
+
+
+on:
+
+  workflow_dispatch:
+
+  push:
+
+    branches:
+      - main
+
+    paths:
+      - "kv-node/**"
+      - "api/**"
+      - "k8s/azure/**"
+      - ".github/workflows/deploy-azure.yaml"
+
+
+permissions:
+
+  contents: read
+
+  id-token: write
+
+
+env:
+
+  RESOURCE_GROUP: a3store-rg
+
+  AKS_CLUSTER: a3store-aks
+
+  ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    environment: azure-portfolio
+
+
+    steps:
+
+      - name: Checkout
+
+        uses: actions/checkout@v4
+
+
+      - name: Azure login with GitHub OIDC
+
+        uses: azure/login@v2
+
+        with:
+
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+
+      - name: Install kubectl and envsubst
+
+        shell: bash
+
+        run: |
+
+          set -euo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y gettext-base
+
+          az aks install-cli
+
+          kubectl version --client
+
+          envsubst --version | head -n 1
+
+
+      - name: Login to Azure Container Registry
+
+        run: |
+
+          az acr login \
+            --name "$ACR_NAME"
+
+
+      - name: Build and push immutable images
+
+        shell: bash
+
+        run: |
+
+          set -euo pipefail
+
+
+          LOGIN_SERVER="$(
+            az acr show \
+              --name "$ACR_NAME" \
+              --query loginServer \
+              -o tsv
+          )"
+
+
+          KV_IMAGE="$LOGIN_SERVER/a3store-kv-node:${GITHUB_SHA}"
+
+          API_IMAGE="$LOGIN_SERVER/a3store-api:${GITHUB_SHA}"
+
+
+          docker build \
+            -t "$KV_IMAGE" \
+            ./kv-node
+
+
+          docker build \
+            -t "$API_IMAGE" \
+            ./api
+
+
+          docker push "$KV_IMAGE"
+
+          docker push "$API_IMAGE"
+
+
+          echo "KV_IMAGE=$KV_IMAGE" >> "$GITHUB_ENV"
+
+          echo "API_IMAGE=$API_IMAGE" >> "$GITHUB_ENV"
+
+
+      - name: Get AKS credentials
+
+        run: |
+
+          az aks get-credentials \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$AKS_CLUSTER" \
+            --overwrite-existing
+
+
+      - name: Deploy to AKS
+
+        shell: bash
+
+        run: |
+
+          set -euo pipefail
+
+
+          kubectl apply \
+            -f k8s/azure/namespace.yaml
+
+
+          kubectl apply \
+            -f k8s/azure/headless-svc.yaml
+
+
+          kubectl apply \
+            -f k8s/azure/pdb.yaml
+
+
+          kubectl apply \
+            -f k8s/azure/service-api.yaml
+
+
+          envsubst '${KV_IMAGE}' \
+            < k8s/azure/statefulset-kv.yaml \
+            | kubectl apply -f -
+
+
+          envsubst '${API_IMAGE}' \
+            < k8s/azure/deployment-api.yaml \
+            | kubectl apply -f -
+
+
+      - name: Verify rollout
+
+        shell: bash
+
+        run: |
+
+          set -euo pipefail
+
+
+          kubectl rollout status \
+            statefulset/kv \
+            -n kv \
+            --timeout=10m
+
+
+          kubectl rollout status \
+            deployment/api \
+            -n kv \
+            --timeout=5m
+
+
+          echo "=== Nodes ==="
+
+          kubectl get nodes -o wide
+
+
+          echo "=== Pods ==="
+
+          kubectl get pods \
+            -n kv \
+            -o wide
+
+
+          echo "=== PVCs ==="
+
+          kubectl get pvc \
+            -n kv

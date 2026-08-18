@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: api
+  namespace: kv
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: api
+
+  template:
+
+    metadata:
+      labels:
+        app: api
+        app.kubernetes.io/name: a3store-api
+        app.kubernetes.io/part-of: a3store
+
+    spec:
+
+      containers:
+        - name: api
+
+          image: ${API_IMAGE}
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          env:
+            - name: KV_GRPC_TARGET
+              value: "kv-headless.kv.svc.cluster.local:50051"
+
+            - name: GOSSIP_HTTP
+              value: "http://kv-headless.kv.svc.cluster.local:8001"
+
+            - name: REPLICATION_FACTOR
+              value: "2"
+
+          resources:
+
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+          readinessProbe:
+
+            httpGet:
+              path: /healthz
+              port: http
+
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+
+            httpGet:
+              path: /healthz
+              port: http
+
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
