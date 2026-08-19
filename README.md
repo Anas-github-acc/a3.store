@@ -205,10 +205,33 @@ DEBUG_LOG=true ./kvrun.sh
   - `[ANTI-ENTROPY]` — repair rounds and chunk mismatches
 
 
+## Testing & Engineering Metrics
+
+To run unit and integration tests with coverage reporting:
+
+```bash
+cd kv-node
+pytest --cov=app --cov-report=term-missing
+```
+
+To record raw test coverage output and update metrics evidence:
+
+```bash
+mkdir -p docs/metrics/coverage
+cd kv-node && pytest --cov=app --cov-report=term-missing > ../docs/metrics/coverage/$(date +%Y-%m-%d).txt
+```
+
+Metrics log & raw evidence:
+- Engineering Metrics Log: [docs/engineering-metrics.md](docs/engineering-metrics.md)
+- Raw Coverage Evidence: [docs/metrics/coverage/2026-08-19.txt](docs/metrics/coverage/2026-08-19.txt)
+
+
 ## Project layout (short)
 
 - `kv-node/` — Python node code (server, gossip, anti-entropy, storage)
 - `proto/` — `kv.proto` definition
-- `nodejs-client/` — JS client + tests
+- `node-client/` — JS client + tests
+- `docs/` — Engineering metrics log (`engineering-metrics.md`) & raw evidence (`metrics/`)
 - `scripts/` — helpers (docker.sh, kvrun.sh)
 - `infra/`, `k8s/`, `terraform/` — deployment manifests
+

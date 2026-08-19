@@ -1,0 +1,9 @@
+[run]
+source = app
+omit =
+    app/kv_pb2.py
+    app/kv_pb2_grpc.py
+
+[report]
+show_missing = True
+skip_covered = True

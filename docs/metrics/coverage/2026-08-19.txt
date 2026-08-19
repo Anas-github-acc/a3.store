@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.6, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/anas/myspace/distributed-system/a3.store/kv-node
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.14.2, mock-3.15.1, cov-7.1.0
+collected 35 items
+
+tests/integration/test_cluster_recovery.py .                             [  2%]
+tests/integration/test_replication.py .                                  [  5%]
+tests/unit/test_anti_entropy.py .......                                  [ 25%]
+tests/unit/test_gossip.py ..                                             [ 31%]
+tests/unit/test_grpc_server.py .......                                   [ 51%]
+tests/unit/test_interfaces.py ..                                         [ 57%]
+tests/unit/test_node.py .                                                [ 60%]
+tests/unit/test_peer_client.py ...                                       [ 68%]
+tests/unit/test_storage.py .....                                         [ 82%]
+tests/unit/test_storage_contract.py ......                               [100%]
+
+=============================== warnings summary ===============================
+../../../../.pyenv/versions/3.12.6/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/anas/.pyenv/versions/3.12.6/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.6-final-0 ________________
+
+Name                    Stmts   Miss  Cover   Missing
+-----------------------------------------------------
+app/anti_entropy.py       133     10    92%   11-12, 135-137, 212-216
+app/gossip.py              61     17    72%   86, 93-116
+app/grpc_client.py         41      4    90%   4-5, 9-10
+app/grpc_server.py        124     19    85%   70, 74, 99, 108-110, 119-121, 135-137, 151-157
+app/interfaces.py          25      7    72%   9, 13, 21, 35, 44, 53, 62
+app/memory_storage.py      22      2    91%   6-7
+app/metrics.py             32      6    81%   9-10, 18-19, 27-28
+app/node.py                66     29    56%   34, 44, 61, 75-114, 118-119
+app/storage.py             57      5    91%   7-8, 68-70
+-----------------------------------------------------
+TOTAL                     569     99    83%
+
+1 file skipped due to complete coverage.
+======================== 35 passed, 1 warning in 0.31s =========================

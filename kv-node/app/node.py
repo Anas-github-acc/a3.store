@@ -4,8 +4,9 @@ import uvicorn
 
 from gossip import start_gossip_loop, membership, app as gossip_app
 from grpc_server import serve_grpc
-from anti_entropy import start_anti_entropy
-from storage import Storage
+from anti_entropy import AntiEntropyService
+from storage import SQLiteStorage
+from grpc_client import GrpcPeerClient
 
 from metrics import node_up
 
@@ -35,7 +36,6 @@ else:
     PEERS = []
 
 # Remove own GRPC address if present
-# PEERS = [p for p in PEERS if not p.endswith(str(GRPC_PORT))]
 PEERS = [p for p in PEERS if p != OWN_ADDR]
 
 # GOSSIP PEERS
@@ -86,7 +86,8 @@ def main():
 
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR, exist_ok=True)
-    storage = Storage(os.path.join(DATA_DIR, "node.db"))
+    storage = SQLiteStorage(os.path.join(DATA_DIR, "node.db"))
+    peer_client = GrpcPeerClient()
 
     start_gossip_http_server()
 
@@ -100,7 +101,14 @@ def main():
             if info.get("addr") != OWN_ADDR
         ]
 
-    start_anti_entropy(storage, get_peer_list, OWN_ID, OWN_ADDR)
+    anti_entropy = AntiEntropyService(
+        storage=storage,
+        peer_client=peer_client,
+        peer_provider=get_peer_list,
+        own_id=OWN_ID,
+        own_addr=OWN_ADDR
+    )
+    anti_entropy.start()
     print("[repair] Anti-entropy background loop started.")
 
     serve_grpc(GRPC_PORT, storage, OWN_ADDR, REPLICATION_FACTOR)

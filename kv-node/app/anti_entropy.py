@@ -5,9 +5,11 @@ import time
 import threading
 import json
 import sys
-from grpc_client import get_chunk_hash, fetch_range
 
-from metrics import anti_entropy_runs, anti_entropy_repairs
+try:
+    from metrics import anti_entropy_runs, anti_entropy_repairs
+except ImportError:
+    from app.metrics import anti_entropy_runs, anti_entropy_repairs
 
 
 CHUNK_COUNT = 16         # number of partitions (should match storage & hashing)
@@ -81,115 +83,144 @@ def compute_chunk_hash(storage, chunk_id):
     return h.digest()
 
 
-def repair_chunk_from_peer(storage, peer_addr, chunk_id):
-    """
-    Pull differing keys from peer node and merge into local storage.
-    Used when chunk hashes mismatch.
-    """
-    try:
-        log_ae(f"Fetching chunk {chunk_id} data from {peer_addr}...", Colors.CYAN)
-        log_ae_event("repair_start", peer_addr, chunk_id, keys=0)
-        stream = fetch_range(peer_addr, chunk_id, timeout=RANGE_TIMEOUT)
-        repaired_count = 0
-        for kv in stream:
-            key = kv.key
-            value = kv.value
-            modified_at = kv.modified_at
+class AntiEntropyService:
+    def __init__(
+        self,
+        storage,
+        peer_client,
+        peer_provider,
+        own_id=None,
+        own_addr=None,
+        interval=SYNC_INTERVAL
+    ):
+        self.storage = storage
+        self.peer_client = peer_client
+        self.peer_provider = peer_provider
+        self.own_id = own_id
+        self.own_addr = own_addr
+        self.interval = interval
+        self._running = False
+        self._thread = None
 
-            # compare with local
-            local_val, local_ts = storage.get(key)
-
-            # last-write-wins policy (can replace with vector clocks)
-            if (local_ts is None) or (modified_at > local_ts):
-                log_ae(f"Repairing key={key} from {peer_addr} (remote_ts={modified_at}, local_ts={local_ts})", Colors.YELLOW)
-                storage.async_put(key, value, modified_at)
-                repaired_count += 1
-        
-        if repaired_count > 0:
-            log_ae(f"Repaired {repaired_count} keys from chunk {chunk_id} via {peer_addr}", Colors.GREEN)
-            log_ae_event("repair_complete", peer_addr, chunk_id, keys=repaired_count)
-        anti_entropy_repairs.inc() # -- prometheus metric
-
-    except Exception as e:
-        log_ae(f"Repair chunk {chunk_id} from {peer_addr} failed: {e}", Colors.RED)
-
-
-def process_single_peer(storage, peer_addr):
-    """
-    Compare and repair all chunks with a single peer.
-    """
-    for chunk_id in range(CHUNK_COUNT):
+    def repair_chunk_from_peer(self, peer_addr, chunk_id):
+        """
+        Pull differing keys from peer node and merge into local storage.
+        Used when chunk hashes mismatch.
+        """
         try:
-            # local hash
-            local_hash = compute_chunk_hash(storage, chunk_id)
+            log_ae(f"Fetching chunk {chunk_id} data from {peer_addr}...", Colors.CYAN)
+            log_ae_event("repair_start", peer_addr, chunk_id, keys=0)
+            stream = self.peer_client.fetch_range(peer_addr, chunk_id, timeout=RANGE_TIMEOUT)
+            repaired_count = 0
+            for kv in stream:
+                key = getattr(kv, 'key', None) or (kv[0] if isinstance(kv, (tuple, list)) else None)
+                value = getattr(kv, 'value', None) or (kv[1] if isinstance(kv, (tuple, list)) else None)
+                modified_at = getattr(kv, 'modified_at', None) or (kv[2] if isinstance(kv, (tuple, list)) else 0)
 
-            # peer hash
-            resp = get_chunk_hash(peer_addr, chunk_id, timeout=CHUNK_TIMEOUT)
-            peer_hash = resp.hash
+                # compare with local
+                local_val, local_ts = self.storage.get(key)
 
-            # mismatch => repair this chunk
-            if peer_hash != local_hash:
-                log_ae(f"MISMATCH @ chunk {chunk_id} vs {peer_addr} (local={local_hash[:8].hex()}... peer={peer_hash[:8].hex()}...) → repairing...", Colors.YELLOW)
-                log_ae_event(
-                    "chunk_mismatch",
-                    peer_addr,
-                    chunk_id,
-                    keys=0,
-                    extra={
-                        "local_hash": local_hash.hex(),
-                        "peer_hash": peer_hash.hex(),
-                        "local_hash_short": local_hash[:8].hex(),
-                        "peer_hash_short": peer_hash[:8].hex(),
-                        "peer": peer_addr,
-                    },
-                )
-                repair_chunk_from_peer(storage, peer_addr, chunk_id)
+                # last-write-wins policy
+                if (local_ts is None) or (modified_at > local_ts):
+                    log_ae(f"Repairing key={key} from {peer_addr} (remote_ts={modified_at}, local_ts={local_ts})", Colors.YELLOW)
+                    self.storage.put(key, value, modified_at)
+                    repaired_count += 1
+            
+            if repaired_count > 0:
+                log_ae(f"Repaired {repaired_count} keys from chunk {chunk_id} via {peer_addr}", Colors.GREEN)
+                log_ae_event("repair_complete", peer_addr, chunk_id, keys=repaired_count)
+            anti_entropy_repairs.inc()
+            return repaired_count
 
         except Exception as e:
-            log_ae(f"Error comparing chunk {chunk_id} with {peer_addr}: {e}", Colors.RED)
-            log_ae_event("compare_error", peer_addr, chunk_id, keys=0)
+            log_ae(f"Repair chunk {chunk_id} from {peer_addr} failed: {e}", Colors.RED)
+            raise e
 
+    def process_single_peer(self, peer_addr):
+        """
+        Compare and repair all chunks with a single peer.
+        """
+        for chunk_id in range(CHUNK_COUNT):
+            try:
+                # local hash
+                local_hash = compute_chunk_hash(self.storage, chunk_id)
 
-def anti_entropy_loop(storage, get_peer_list, own_id=None, own_addr=None, interval=SYNC_INTERVAL):
-    """
-    Background loop:
-    - get_peer_list(): must return list of peer addresses like "127.0.0.1:50051"
-    - compares chunk hashes
-    - repairs mismatched chunks using FetchRange()
-    Runs forever in a thread.
-    """
-    while True:
-        anti_entropy_runs.inc() # -- prometheus metric
-        peers = get_peer_list()
+                # peer hash
+                resp = self.peer_client.get_chunk_hash(peer_addr, chunk_id, timeout=CHUNK_TIMEOUT)
+                peer_hash = getattr(resp, 'hash', resp)
+
+                # mismatch => repair this chunk
+                if peer_hash != local_hash:
+                    peer_hex = peer_hash.hex() if isinstance(peer_hash, bytes) else str(peer_hash)
+                    log_ae(f"MISMATCH @ chunk {chunk_id} vs {peer_addr} (local={local_hash[:8].hex()}... peer={peer_hex[:8]}...) → repairing...", Colors.YELLOW)
+                    log_ae_event(
+                        "chunk_mismatch",
+                        peer_addr,
+                        chunk_id,
+                        keys=0,
+                        extra={
+                            "local_hash": local_hash.hex(),
+                            "peer_hash": peer_hex,
+                            "local_hash_short": local_hash[:8].hex(),
+                            "peer_hash_short": peer_hex[:8],
+                            "peer": peer_addr,
+                        },
+                    )
+                    self.repair_chunk_from_peer(peer_addr, chunk_id)
+
+            except Exception as e:
+                log_ae(f"Error comparing chunk {chunk_id} with {peer_addr}: {e}", Colors.RED)
+                log_ae_event("compare_error", peer_addr, chunk_id, keys=0)
+
+    def run_sync_round(self):
+        anti_entropy_runs.inc()
+        peers = self.peer_provider()
         if not peers:
             log_ae("No peers available, skipping sync round", Colors.YELLOW)
-            if own_addr:
-                log_ae_event("no_peers", own_addr, -1, keys=0)
-            time.sleep(interval)
-            continue
+            if self.own_addr:
+                log_ae_event("no_peers", self.own_addr, -1, keys=0)
+            return
 
         log_ae(f"Starting sync round with peers: {peers}", Colors.BLUE)
-        if own_addr:
-            log_ae_event("sync_start", own_addr, -1, keys=len(peers))
+        if self.own_addr:
+            log_ae_event("sync_start", self.own_addr, -1, keys=len(peers))
 
         for peer in peers:
-            process_single_peer(storage, peer)
+            self.process_single_peer(peer)
 
-        log_ae(f"Sync round complete. Next sync in {interval}s", Colors.BLUE)
-        if own_addr:
-            log_ae_event("sync_complete", own_addr, -1, keys=0)
-        time.sleep(interval)
+        log_ae(f"Sync round complete. Next sync in {self.interval}s", Colors.BLUE)
+        if self.own_addr:
+            log_ae_event("sync_complete", self.own_addr, -1, keys=0)
+
+    def start(self):
+        self._running = True
+        def loop():
+            while self._running:
+                self.run_sync_round()
+                time.sleep(self.interval)
+
+        self._thread = threading.Thread(target=loop, daemon=True)
+        self._thread.start()
+        print("[anti-entropy] Background repair thread started")
+
+    def stop(self):
+        self._running = False
 
 
-def start_anti_entropy(storage, get_peer_list, own_id=None, own_addr=None):
-    """
-    Spawns the background thread.
-    Use in main node startup.
-    """
-    t = threading.Thread(
-        target=anti_entropy_loop,
-        args=(storage, get_peer_list, own_id, own_addr),
-        daemon=True
+def start_anti_entropy(storage, get_peer_list, own_id=None, own_addr=None, peer_client=None):
+    if peer_client is None:
+        try:
+            from grpc_client import GrpcPeerClient
+        except ImportError:
+            from app.grpc_client import GrpcPeerClient
+        peer_client = GrpcPeerClient()
+
+    service = AntiEntropyService(
+        storage=storage,
+        peer_client=peer_client,
+        peer_provider=get_peer_list,
+        own_id=own_id,
+        own_addr=own_addr
     )
-    t.start()
-    print("[anti-entropy] Background repair thread started")
+    service.start()
+    return service

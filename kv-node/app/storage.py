@@ -1,9 +1,15 @@
-import sqlite3, threading
+import sqlite3
+import threading
 import zlib
 
-class Storage:
+try:
+    from interfaces import StorageBackend
+except ImportError:
+    from app.interfaces import StorageBackend
+
+
+class SQLiteStorage(StorageBackend):
     def __init__(self, db_path):
-        # each thread should create its own connection
         self.db_path = db_path
         self._local = threading.local()
         self._init_db()
@@ -30,36 +36,75 @@ class Storage:
         conn.commit()
         conn.close()
 
-    def put(self, key, value, modified_at):
+    def put(self, key: str, value: str, modified_at: int) -> bool:
         conn = self._conn()
         cur = conn.cursor()
-        
-        cur.execute("BEGIN IMMEDIATE") # Lock the DB immediately for this transaction
+
+        cur.execute("BEGIN IMMEDIATE")
         try:
-            cur.execute("SELECT modified_at FROM kv WHERE key = ?", (key,))
+            cur.execute(
+                "SELECT modified_at FROM kv WHERE key = ?",
+                (key,)
+            )
+
             row = cur.fetchone()
+
             if row and row[0] >= modified_at:
                 cur.execute("COMMIT")
                 return False
-            cur.execute("REPLACE INTO kv (key, value, modified_at) VALUES (?, ?, ?)", (key, value, modified_at))
+
+            cur.execute(
+                """
+                REPLACE INTO kv
+                (key, value, modified_at)
+                VALUES (?, ?, ?)
+                """,
+                (key, value, modified_at)
+            )
+
             cur.execute("COMMIT")
             return True
-        except Exception as e:
+
+        except Exception:
             cur.execute("ROLLBACK")
-            raise e
-    
-    def get(self, key):
+            raise
+
+    def get(self, key: str):
         conn = self._conn()
         cur = conn.cursor()
-        cur.execute("SELECT value, modified_at FROM kv WHERE key = ?", (key,))
+
+        cur.execute(
+            "SELECT value, modified_at FROM kv WHERE key = ?",
+            (key,)
+        )
+
         row = cur.fetchone()
+
         return (row[0], row[1]) if row else (None, 0)
 
-    def scan_chunk_with_ts(self, chunk_id, chunk_count):
+    def scan_chunk_with_ts(
+        self,
+        chunk_id: int,
+        chunk_count: int
+    ):
         conn = self._conn()
         cur = conn.cursor()
-        cur.execute("SELECT key, value, modified_at FROM kv")
-        for k, v, m in cur.fetchall():
-            hashed_key = zlib.crc32(k.encode('utf-8'))
-            if (hashed_key % chunk_count) == chunk_id:
-                yield (k, v, m or 0)
+
+        cur.execute(
+            "SELECT key, value, modified_at FROM kv"
+        )
+
+        for key, value, modified_at in cur.fetchall():
+            hashed_key = zlib.crc32(
+                key.encode("utf-8")
+            )
+
+            if hashed_key % chunk_count == chunk_id:
+                yield (
+                    key,
+                    value,
+                    modified_at or 0
+                )
+
+
+Storage = SQLiteStorage
